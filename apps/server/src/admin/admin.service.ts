@@ -413,6 +413,8 @@ export class AdminService {
 
   /** 支付网关可后台配置的字段（白名单）与其中的敏感项 */
   private static readonly PAYMENT_FIELDS: Record<string, string[]> = {
+    // mock 无凭据可配，仅支持启停（是否注册仍由 PAYMENT_MOCK_ENABLED/NODE_ENV 决定）
+    mock: ["enabled"],
     epay: ["pid", "key", "gateway", "enabled"],
     alipay: ["appId", "privateKey", "alipayPublicKey", "gateway", "enabled"],
     stripe: ["secretKey", "webhookSecret", "currency", "enabled"],

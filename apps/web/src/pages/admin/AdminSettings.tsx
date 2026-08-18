@@ -15,6 +15,7 @@ const PAY_PROVIDERS = [
   { value: "epay", label: "易支付" },
   { value: "alipay", label: "支付宝" },
   { value: "stripe", label: "Stripe" },
+  { value: "mock", label: "沙箱支付" },
 ] as const;
 
 const PAY_FIELD_LABELS: Record<string, Record<string, string>> = {
@@ -26,6 +27,8 @@ const PAY_FIELD_LABELS: Record<string, Record<string, string>> = {
     gateway: "网关（默认 openapi.alipay.com）",
   },
   stripe: { secretKey: "Secret Key", webhookSecret: "Webhook Secret", currency: "计费货币（默认 usd）" },
+  // 沙箱无凭据字段，仅启停开关
+  mock: {},
 };
 
 export default function AdminSettings() {
