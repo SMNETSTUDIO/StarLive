@@ -44,12 +44,16 @@ export default function LotteryPanel({
         <div>
           <div className="flex between">
             <b>{lottery.title}</b>
-            <span className="badge">{lottery.participants} 人参与</span>
+            <span className="badge">👥 {lottery.participants}</span>
           </div>
-          <p className="small muted">
-            {lottery.drawn
-              ? `已开奖 · 中奖 ${lottery.winnerCount} 人`
-              : `剩余 ${remaining}s · 中奖 ${lottery.winnerCount} 人`}
+          <p className="small" style={{ margin: "6px 0 10px" }}>
+            {lottery.drawn ? (
+              <span className="badge badge-ok">已开奖 · 中奖 {lottery.winnerCount} 人</span>
+            ) : (
+              <span className="badge badge-warn">
+                ⏳ 剩余 {remaining}s · 中奖 {lottery.winnerCount} 人
+              </span>
+            )}
           </p>
           {lottery.winners && lottery.winners.length > 0 && (
             <p className="small" style={{ color: "var(--green)" }}>
@@ -70,13 +74,38 @@ export default function LotteryPanel({
           </div>
         </div>
       ) : (
-        <div className="muted small">暂无进行中的抽奖</div>
+        <div className="muted small" style={{ padding: "8px 0" }}>
+          暂无进行中的抽奖
+        </div>
       )}
       {isOwner && (
-        <div className="flex wrap" style={{ marginTop: 12 }}>
-          <input className="input" style={{ width: 120 }} value={title} onChange={(e) => setTitle(e.target.value)} />
-          <input className="input" style={{ width: 60 }} type="number" value={winnerCount} onChange={(e) => setWinnerCount(Number(e.target.value))} />
-          <input className="input" style={{ width: 60 }} type="number" value={durationSec} onChange={(e) => setDurationSec(Number(e.target.value))} />
+        <div className="flex wrap" style={{ marginTop: 12, gap: 8 }}>
+          <input
+            className="input"
+            style={{ flex: 1, minWidth: 110 }}
+            title="抽奖标题"
+            placeholder="标题"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+          />
+          <input
+            className="input"
+            style={{ width: 64 }}
+            type="number"
+            title="中奖人数"
+            placeholder="人数"
+            value={winnerCount}
+            onChange={(e) => setWinnerCount(Number(e.target.value))}
+          />
+          <input
+            className="input"
+            style={{ width: 64 }}
+            type="number"
+            title="时长（秒）"
+            placeholder="秒"
+            value={durationSec}
+            onChange={(e) => setDurationSec(Number(e.target.value))}
+          />
           <button className="btn btn-sm btn-primary" onClick={() => onCreate(title, winnerCount, durationSec)}>
             发起
           </button>

@@ -752,6 +752,116 @@ code {
   color: #fff;
 }
 
+.balance-card.green {
+  background: linear-gradient(135deg, #30d158, #1ca7a0 75%, #0a84ff);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    0 14px 40px rgba(48, 209, 88, 0.3);
+}
+
+/* 红包 */
+.rp-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(
+    135deg,
+    rgba(255, 69, 58, 0.12),
+    rgba(255, 159, 10, 0.07)
+  );
+  border: 1px solid rgba(255, 69, 58, 0.2);
+}
+
+.rp-row.done {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.07);
+  opacity: 0.7;
+}
+
+.rp-icon {
+  font-size: 22px;
+  flex-shrink: 0;
+}
+
+.rp-progress {
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+  margin-top: 6px;
+}
+
+.rp-progress span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #ff453a, #ff9f0a);
+  transition: width 0.4s var(--ease);
+}
+
+.rp-claim {
+  background: linear-gradient(135deg, #ff453a, #ff6b3a);
+  border-color: transparent;
+  color: #fff;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25),
+    0 4px 14px rgba(255, 69, 58, 0.35);
+}
+
+.rp-claim:hover:not(:disabled) {
+  filter: brightness(1.08);
+  border-color: transparent;
+  background: linear-gradient(135deg, #ff453a, #ff6b3a);
+}
+
+/* 状态页（404 / 封禁 / 维护） */
+.status-page {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 80px 20px;
+  animation: page-in 0.5s var(--spring) both;
+}
+
+.status-page .status-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 88px;
+  height: 88px;
+  border-radius: 24px;
+  font-size: 44px;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.1),
+    rgba(255, 255, 255, 0.03)
+  );
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 20px 50px rgba(0, 0, 0, 0.45);
+  margin-bottom: 24px;
+}
+
+.status-page h2 {
+  font-size: 26px;
+  margin-bottom: 8px;
+}
+
+.status-page .status-code {
+  font-size: 72px;
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  line-height: 1.1;
+  background: linear-gradient(100deg, #0a84ff, #5e5ce6 55%, #bf5af2);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 8px;
+}
+
 .balance-num {
   font-size: 36px;
   font-weight: 700;
