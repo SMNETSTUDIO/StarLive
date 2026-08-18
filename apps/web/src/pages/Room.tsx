@@ -6,6 +6,7 @@ import DanmakuLayer from "../components/DanmakuLayer";
 import GiftEffectLayer, { type GiftFx } from "../components/GiftEffectLayer";
 import GiftPanel from "../components/GiftPanel";
 import LotteryPanel, { type LotteryInfo } from "../components/LotteryPanel";
+import Modal from "../components/Modal";
 import Player from "../components/Player";
 import RankPanel, { type RewardRecord } from "../components/RankPanel";
 import RedpacketPanel, { type RedpacketItem } from "../components/RedpacketPanel";
@@ -14,6 +15,8 @@ import { ApiError, get, post } from "../lib/api";
 import { giftEmoji } from "../lib/gift-emoji";
 import { getGuestId } from "../lib/guest";
 import { getSocket } from "../lib/socket";
+
+const REPORT_REASONS = ["违法违规", "色情低俗", "辱骂骚扰", "垃圾广告", "血腥暴力", "其他"];
 
 interface RoomData {
   id: string;
@@ -49,6 +52,10 @@ export default function Room() {
   const [onlineUsers, setOnlineUsers] = useState<
     { id: string; name: string; avatarUrl?: string }[]
   >([]);
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportReason, setReportReason] = useState(REPORT_REASONS[0]);
+  const [reportDetail, setReportDetail] = useState("");
+  const [reportState, setReportState] = useState<"idle" | "sending" | "done">("idle");
   const messagesRef = useRef<DanmakuMessage[]>([]);
 
   const isOwner = user?.id === room?.ownerId;
@@ -271,6 +278,37 @@ export default function Room() {
     }
   };
 
+  const openReport = () => {
+    if (!user) {
+      window.location.href = "/login";
+      return;
+    }
+    setReportOpen(true);
+  };
+
+  const onSubmitReport = async () => {
+    if (!room || reportState === "sending") return;
+    setReportState("sending");
+    try {
+      await post("/report-create", {
+        roomId,
+        targetUserId: room.ownerId,
+        reason: reportDetail.trim() ? `${reportReason}：${reportDetail.trim()}` : reportReason,
+      });
+      setReportState("done");
+      setTimeout(() => {
+        setReportOpen(false);
+        setReportState("idle");
+        setReportDetail("");
+        setReportReason(REPORT_REASONS[0]);
+      }, 1500);
+    } catch (e) {
+      setReportState("idle");
+      setError((e as Error).message);
+      setTimeout(() => setError(""), 3000);
+    }
+  };
+
   const onCreateLottery = async (title: string, winnerCount: number, durationSec: number) => {
     try {
       await post("/lottery/create", { roomId, title, winnerCount, durationSec });
@@ -372,6 +410,11 @@ export default function Room() {
             弹幕窗口
           </Link>
           {isOwner && <Link className="btn btn-sm" to={`/room/${roomId}/recordings`}>录播</Link>}
+          {!isOwner && (
+            <button className="btn btn-sm btn-ghost" onClick={openReport} title="举报该直播间">
+              🚩 举报
+            </button>
+          )}
         </div>
       </div>
 
@@ -450,6 +493,57 @@ export default function Room() {
           />
         </div>
       </div>
+
+      {reportOpen && (
+        <Modal title="举报直播间" onClose={() => setReportOpen(false)}>
+          {reportState === "done" ? (
+            <div className="empty" style={{ padding: "28px 0" }}>
+              <div style={{ fontSize: 36 }}>✅</div>
+              <p style={{ margin: "8px 0 0" }}>举报已提交，管理员会尽快处理</p>
+            </div>
+          ) : (
+            <>
+              <div className="field">
+                <label>举报原因</label>
+                <div className="chips">
+                  {REPORT_REASONS.map((r) => (
+                    <button
+                      key={r}
+                      type="button"
+                      className={`chip ${reportReason === r ? "active" : ""}`}
+                      onClick={() => setReportReason(r)}
+                    >
+                      {r}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="field">
+                <label>补充说明（选填）</label>
+                <textarea
+                  className="input"
+                  rows={3}
+                  maxLength={200}
+                  value={reportDetail}
+                  onChange={(e) => setReportDetail(e.target.value)}
+                  placeholder="补充违规行为的具体描述，便于管理员核实…"
+                />
+              </div>
+              <p className="muted small" style={{ margin: "0 0 12px" }}>
+                恶意举报可能导致账号处罚，请如实填写。
+              </p>
+              <button
+                className="btn btn-primary"
+                style={{ width: "100%" }}
+                disabled={reportState === "sending"}
+                onClick={onSubmitReport}
+              >
+                {reportState === "sending" ? "提交中…" : "提交举报"}
+              </button>
+            </>
+          )}
+        </Modal>
+      )}
     </div>
   );
 }
