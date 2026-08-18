@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import MiniBars from "../../components/MiniBars";
 import { get } from "../../lib/api";
 
 interface Stats {
@@ -23,6 +24,13 @@ interface RoomRow {
   status: string;
   category?: string;
   createdAt?: string | number;
+}
+
+interface TrendPoint {
+  date: string;
+  users: number;
+  rooms: number;
+  revenue: number;
 }
 
 const CARDS: {
@@ -63,8 +71,10 @@ export default function AdminOverview() {
   const [users, setUsers] = useState<UserRow[]>([]);
   const [rooms, setRooms] = useState<RoomRow[]>([]);
   const [features, setFeatures] = useState<Record<string, boolean> | null>(null);
+  const [trends, setTrends] = useState<TrendPoint[]>([]);
 
   useEffect(() => {
+    get<TrendPoint[]>("/admin/trends").then(setTrends).catch(() => undefined);
     get<Stats>("/admin/stats").then(setStats).catch(() => undefined);
     get<UserRow[]>("/admin/users")
       .then((r) =>
@@ -108,6 +118,49 @@ export default function AdminOverview() {
           </div>
         ))}
       </div>
+
+      {trends.length > 0 && (
+        <div className="grid grid-3" style={{ marginTop: 16 }}>
+          <div className="card">
+            <div className="flex between">
+              <h3 style={{ margin: 0, fontSize: 14 }}>📈 新增用户（14 天）</h3>
+              <span className="muted small">{trends.reduce((s, t) => s + t.users, 0)}</span>
+            </div>
+            <MiniBars
+              values={trends.map((t) => t.users)}
+              labels={trends.map((t) => t.date)}
+              color="#0a84ff"
+              format={(v) => `${v} 人`}
+            />
+          </div>
+          <div className="card">
+            <div className="flex between">
+              <h3 style={{ margin: 0, fontSize: 14 }}>📺 新增房间（14 天）</h3>
+              <span className="muted small">{trends.reduce((s, t) => s + t.rooms, 0)}</span>
+            </div>
+            <MiniBars
+              values={trends.map((t) => t.rooms)}
+              labels={trends.map((t) => t.date)}
+              color="#5e5ce6"
+              format={(v) => `${v} 个`}
+            />
+          </div>
+          <div className="card">
+            <div className="flex between">
+              <h3 style={{ margin: 0, fontSize: 14 }}>💰 充值收入（14 天）</h3>
+              <span className="muted small">
+                ¥{trends.reduce((s, t) => s + t.revenue, 0).toFixed(2)}
+              </span>
+            </div>
+            <MiniBars
+              values={trends.map((t) => t.revenue)}
+              labels={trends.map((t) => t.date)}
+              color="#30d158"
+              format={(v) => `¥${v.toFixed(2)}`}
+            />
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-2" style={{ marginTop: 16 }}>
         <div className="card">

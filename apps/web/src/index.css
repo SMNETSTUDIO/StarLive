@@ -758,6 +758,45 @@ code {
     0 14px 40px rgba(48, 209, 88, 0.3);
 }
 
+/* 迷你柱状图 */
+.mini-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  height: 96px;
+  padding-top: 6px;
+}
+
+.mini-bars .bar {
+  flex: 1;
+  min-height: 3px;
+  border-radius: 4px 4px 2px 2px;
+  background: linear-gradient(180deg, var(--bar-color, #0a84ff), rgba(10, 132, 255, 0.35));
+  transition: filter 0.15s var(--ease), transform 0.15s var(--ease);
+  cursor: default;
+}
+
+.mini-bars .bar:hover {
+  filter: brightness(1.35);
+  transform: scaleY(1.03);
+  transform-origin: bottom;
+}
+
+.mini-bars-labels {
+  display: flex;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.mini-bars-labels span {
+  flex: 1;
+  text-align: center;
+  font-size: 10px;
+  color: var(--text-faint);
+  overflow: hidden;
+  white-space: nowrap;
+}
+
 /* 弹窗 */
 .modal-overlay {
   position: fixed;

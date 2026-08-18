@@ -20,6 +20,11 @@ export class AdminController {
     return this.admin.stats();
   }
 
+  @Get("trends")
+  trends(@Query("days") days?: string) {
+    return this.admin.trends(Math.min(Math.max(Number(days ?? 14), 7), 30));
+  }
+
   @Get("users")
   users() {
     return this.admin.listUsers();

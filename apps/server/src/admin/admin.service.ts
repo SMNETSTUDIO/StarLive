@@ -32,6 +32,43 @@ export class AdminService {
     return { users, rooms, publicRooms, pendingWithdrawals };
   }
 
+  /** 近 N 天趋势：每日新增用户 / 新增房间 / 充值金额 */
+  async trends(days = 14) {
+    const [users, rooms, orders] = await Promise.all([
+      this.listUsers(),
+      this.listRooms(),
+      this.listOrders(),
+    ]);
+    const buckets: { date: string; key: string; users: number; rooms: number; revenue: number }[] = [];
+    const now = new Date();
+    for (let i = days - 1; i >= 0; i--) {
+      const d = new Date(now);
+      d.setDate(d.getDate() - i);
+      buckets.push({
+        date: `${d.getMonth() + 1}/${d.getDate()}`,
+        key: d.toDateString(),
+        users: 0,
+        rooms: 0,
+        revenue: 0,
+      });
+    }
+    const idx = new Map(buckets.map((b) => [b.key, b]));
+    for (const u of users) {
+      const b = idx.get(new Date(u.createdAt).toDateString());
+      if (b) b.users++;
+    }
+    for (const r of rooms) {
+      const b = idx.get(new Date(r.createdAt).toDateString());
+      if (b) b.rooms++;
+    }
+    for (const o of orders) {
+      if (o.status !== "paid") continue;
+      const b = idx.get(new Date(o.createdAt).toDateString());
+      if (b) b.revenue += o.amount;
+    }
+    return buckets.map(({ key: _key, ...rest }) => rest);
+  }
+
   async listUsers() {
     const ids = await redis().smembers(Keys.usersSet);
     const rows = await redisPipeline<Record<string, string>>((p) => {
