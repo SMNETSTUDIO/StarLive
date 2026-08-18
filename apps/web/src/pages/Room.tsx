@@ -46,6 +46,9 @@ export default function Room() {
   const [rewards, setRewards] = useState<RewardRecord[]>([]);
   const [shared, setShared] = useState(false);
   const [follow, setFollow] = useState<{ followers: number; following: boolean } | null>(null);
+  const [onlineUsers, setOnlineUsers] = useState<
+    { id: string; name: string; avatarUrl?: string }[]
+  >([]);
   const messagesRef = useRef<DanmakuMessage[]>([]);
 
   const isOwner = user?.id === room?.ownerId;
@@ -164,7 +167,17 @@ export default function Room() {
       // 刷新贡献榜
       loadRewards();
     };
-    const onPresence = (p: { viewerCount: number }) => setViewers(p.viewerCount);
+    const loadViewers = () =>
+      get<{ users: { id: string; name: string; avatarUrl?: string }[] }>(
+        `/room/viewers?roomId=${roomId}`,
+      )
+        .then((r) => setOnlineUsers(r.users))
+        .catch(() => undefined);
+    loadViewers();
+    const onPresence = (p: { viewerCount: number }) => {
+      setViewers(p.viewerCount);
+      loadViewers();
+    };
     const onRoomStatus = (p: { status: string }) => setRoom((r) => (r ? { ...r, status: p.status } : r));
     const onRedpacketCreated = () => loadRedpackets();
     const onRedpacketClaimed = () => loadRedpackets();
@@ -301,7 +314,23 @@ export default function Room() {
             {room.title}
             {room.status === "active" && <span className="badge badge-live" style={{ marginLeft: 8 }}>直播中</span>}
           </h2>
-          <span className="muted small">{viewers} 人在看</span>
+          <span className="flex" style={{ gap: 8 }}>
+            <span className="muted small">{viewers} 人在看</span>
+            {onlineUsers.length > 0 && (
+              <span className="avatar-stack">
+                {onlineUsers.slice(0, 6).map((u) => (
+                  <span className="avatar" key={u.id} title={u.name}>
+                    {u.avatarUrl ? <img src={u.avatarUrl} alt="" /> : u.name?.[0] ?? "U"}
+                  </span>
+                ))}
+                {onlineUsers.length > 6 && (
+                  <span className="avatar" title={`共 ${onlineUsers.length} 位用户在线`}>
+                    +{onlineUsers.length - 6}
+                  </span>
+                )}
+              </span>
+            )}
+          </span>
         </div>
         <div className="flex">
           {!isOwner && follow && (

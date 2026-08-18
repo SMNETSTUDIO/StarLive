@@ -40,6 +40,7 @@ function Loading() {
 
 interface Features {
   maintenanceEnabled: boolean;
+  maintenanceMessage?: string;
 }
 
 function Shell() {
@@ -72,7 +73,7 @@ function Shell() {
   }
 
   if (features?.maintenanceEnabled && !isAdmin) {
-    return <Maintenance />;
+    return <Maintenance message={features.maintenanceMessage} />;
   }
 
   return (

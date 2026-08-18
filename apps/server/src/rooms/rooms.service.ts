@@ -263,6 +263,22 @@ export class RoomsService {
     return rest;
   }
 
+  /** 在线观众名单（注册用户，最多 30 人）+ 游客数 */
+  async onlineViewers(roomId: string) {
+    const { VIEWER_TTL_MS } = await import("../common/room-store");
+    const { getUserById } = await import("../common/user-store");
+    const r = redis();
+    const min = Date.now() - VIEWER_TTL_MS;
+    const ids = await r.zrangebyscore(Keys.roomViewersUser(roomId), min, "+inf", "LIMIT", 0, 30);
+    const users: { id: string; name: string; avatarUrl?: string }[] = [];
+    for (const id of ids) {
+      const u = await getUserById(id);
+      if (u) users.push({ id: u.id, name: u.name ?? u.username, avatarUrl: u.avatarUrl });
+    }
+    const guestCount = await r.zcount(Keys.roomViewersGuest(roomId), min, "+inf");
+    return { users, guestCount };
+  }
+
   /** 关注主播 */
   async follow(userId: string, targetUserId: string) {
     if (userId === targetUserId) {

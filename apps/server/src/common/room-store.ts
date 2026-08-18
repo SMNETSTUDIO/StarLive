@@ -3,7 +3,7 @@ import { Keys } from "@starlive/shared";
 import { EVT, publishEvent } from "./event-bus";
 import { redis } from "./redis";
 
-const VIEWER_TTL_MS = 20_000;
+export const VIEWER_TTL_MS = 20_000;
 
 export async function getRoom(roomId: string): Promise<Room | null> {
   const raw = await redis().hgetall(Keys.room(roomId));

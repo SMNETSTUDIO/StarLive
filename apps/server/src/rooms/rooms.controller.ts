@@ -104,6 +104,11 @@ export class RoomsController {
     });
   }
 
+  @Get("viewers")
+  viewers(@Query("roomId") roomId: string) {
+    return this.rooms.onlineViewers(roomId);
+  }
+
   @Post("follow")
   @UseGuards(AuthGuard)
   follow(@Req() req: AuthedRequest, @Body() body: { targetUserId: string }) {
