@@ -22,6 +22,7 @@ export default function Recordings() {
   const [recordings, setRecordings] = useState<RecordingItem[]>([]);
   const [shares, setShares] = useState<ShareItem[]>([]);
   const [error, setError] = useState("");
+  const [copiedToken, setCopiedToken] = useState("");
 
   const load = () => {
     get<RecordingItem[]>(`/recording/list?roomId=${roomId}`).then(setRecordings).catch(() => undefined);
@@ -55,7 +56,8 @@ export default function Recordings() {
   const copyShare = (token: string) => {
     const url = `${location.origin}/api/recording/share-info?token=${token}`;
     navigator.clipboard?.writeText(url).catch(() => undefined);
-    alert(`分享链接：${url}`);
+    setCopiedToken(token);
+    setTimeout(() => setCopiedToken(""), 1500);
   };
 
   return (
@@ -63,9 +65,11 @@ export default function Recordings() {
       <h2>录播管理</h2>
       {error && <div className="alert alert-error">{error}</div>}
       <div className="card">
-        <h3>录播列表</h3>
+        <h3>🎞️ 录播列表</h3>
         {recordings.length === 0 ? (
-          <div className="muted">暂无录播</div>
+          <div className="empty small" style={{ padding: "28px 0" }}>
+            📼 暂无录播 · 在管理后台开启录播功能后，直播会自动落盘
+          </div>
         ) : (
           <table className="table">
             <thead>
@@ -102,9 +106,11 @@ export default function Recordings() {
         )}
       </div>
       <div className="card" style={{ marginTop: 16 }}>
-        <h3>分享链接</h3>
+        <h3>🔗 分享链接</h3>
         {shares.length === 0 ? (
-          <div className="muted">暂无分享链接</div>
+          <div className="empty small" style={{ padding: "28px 0" }}>
+            还没有创建分享链接
+          </div>
         ) : (
           <table className="table">
             <thead>
@@ -122,7 +128,7 @@ export default function Recordings() {
                   <td>
                     <div className="flex">
                       <button className="btn btn-sm" onClick={() => copyShare(s.token)}>
-                        复制链接
+                        {copiedToken === s.token ? "✓ 已复制" : "复制链接"}
                       </button>
                       <button className="btn btn-sm btn-danger" onClick={() => revokeShare(s.token)}>
                         撤销

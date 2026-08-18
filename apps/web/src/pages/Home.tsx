@@ -1,7 +1,61 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { post } from "../lib/api";
+import { get, post } from "../lib/api";
+
+interface LiveRoom {
+  id: string;
+  title: string;
+  category: string;
+  viewerCount: number;
+  status: string;
+}
+
+/** 正在直播区块：有开播房间时才渲染 */
+function LiveNow() {
+  const [rooms, setRooms] = useState<LiveRoom[]>([]);
+
+  useEffect(() => {
+    get<LiveRoom[]>("/room/list")
+      .then((r) => setRooms(r.filter((x) => x.status === "active").slice(0, 3)))
+      .catch(() => undefined);
+  }, []);
+
+  if (rooms.length === 0) return null;
+
+  return (
+    <div>
+      <div className="flex between" style={{ marginBottom: 12 }}>
+        <h2 style={{ margin: 0, fontSize: 18 }}>🔴 正在直播</h2>
+        <Link className="small" to="/live-list">
+          全部直播 ›
+        </Link>
+      </div>
+      <div className="grid grid-3">
+        {rooms.map((r) => (
+          <Link
+            to={`/room/${r.id}`}
+            key={r.id}
+            className="card card-hover"
+            style={{ color: "inherit" }}
+          >
+            <div className="live-thumb">
+              <span style={{ fontSize: 34 }}>🎥</span>
+            </div>
+            <div className="flex between" style={{ marginTop: 14 }}>
+              <span className="badge badge-live">直播中</span>
+              <span className="badge">👀 {r.viewerCount}</span>
+            </div>
+            <h3 style={{ margin: "10px 0 2px", fontSize: 16 }}>{r.title}</h3>
+            <p className="muted small" style={{ margin: 0 }}>
+              {r.category || "未分类"}
+            </p>
+          </Link>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 const FEATURES = [
   { icon: "🎬", title: "高清直播", desc: "自建推流分发，HLS 低延迟播放" },
@@ -68,6 +122,7 @@ export default function Home() {
               </a>
             </div>
           </div>
+          <LiveNow />
           <div className="grid grid-3">
             {FEATURES.map((f) => (
               <div className="card card-hover" key={f.title}>
@@ -82,6 +137,7 @@ export default function Home() {
         </div>
       ) : (
         <div className="flex-col" style={{ gap: 16 }}>
+        <LiveNow />
         <div className="grid grid-2">
           <div className="card">
             <h2>创建直播间</h2>

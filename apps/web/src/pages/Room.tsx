@@ -283,20 +283,34 @@ export default function Room() {
   if (needPassword) {
     return (
       <div className="container">
-        <div className="card" style={{ maxWidth: 360, margin: "60px auto" }}>
-          <h3>房间需要密码</h3>
-          <div className="field">
-            <input
-              className="input"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="请输入房间密码"
-            />
+        <div className="auth-wrap" style={{ maxWidth: 380 }}>
+          <div className="auth-head">
+            <span className="auth-mark">🔒</span>
+            <h2>私密直播间</h2>
+            <p>主播设置了房间密码，输入后即可进入</p>
           </div>
-          <button className="btn btn-primary" onClick={() => loadRoom(password)}>
-            进入
-          </button>
+          <div className="card">
+            {error && <div className="alert alert-error">{error}</div>}
+            <div className="field">
+              <label>房间密码</label>
+              <input
+                className="input"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && loadRoom(password)}
+                placeholder="请输入房间密码…"
+                autoFocus
+              />
+            </div>
+            <button
+              className="btn btn-primary"
+              style={{ width: "100%" }}
+              onClick={() => loadRoom(password)}
+            >
+              进入直播间
+            </button>
+          </div>
         </div>
       </div>
     );
