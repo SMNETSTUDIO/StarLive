@@ -6,7 +6,7 @@ RUN npm install -g pnpm@11.17.0
 WORKDIR /app
 
 # 先拷贝清单以利用依赖缓存
-COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml tsconfig.base.json ./
 COPY packages/shared/package.json packages/shared/
 COPY apps/server/package.json apps/server/
 COPY apps/web/package.json apps/web/
