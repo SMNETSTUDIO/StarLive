@@ -68,6 +68,8 @@ html {
 html,
 body {
   height: 100%;
+  /* 禁止页面级横向平移；个别宽内容（表格/导航）自行局部滚动 */
+  overflow-x: clip;
 }
 
 #root {
@@ -278,8 +280,9 @@ h3 {
 .page-head .page-actions {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
-  flex-shrink: 0;
+  min-width: 0;
 }
 
 /* 液态玻璃卡片 */
@@ -1781,6 +1784,12 @@ code {
   }
   .page-head .page-title {
     font-size: 24px;
+  }
+  /* iOS：输入框字号 <16px 聚焦时会触发页面自动放大 */
+  .input,
+  .select,
+  textarea.input {
+    font-size: 16px;
   }
   .hero-title {
     font-size: 38px;
