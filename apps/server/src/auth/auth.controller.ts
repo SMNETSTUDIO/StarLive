@@ -110,6 +110,11 @@ export class AuthController {
     return { guestId };
   }
 
+  @Get("oauth-status")
+  oauthStatus() {
+    return this.auth.oauthStatus();
+  }
+
   @Get("oauth-initiate")
   async oauthInitiate(
     @Query("redirect") redirect: string,
@@ -125,9 +130,15 @@ export class AuthController {
     @Query("state") state: string,
     @Res() res: Response,
   ) {
-    const { token } = await this.auth.oauthLogin(code);
-    setSessionCookie(res, token);
-    const redirect = state ? decodeURIComponent(state) : "/";
-    res.redirect(redirect);
+    try {
+      const { token } = await this.auth.oauthLogin(code);
+      setSessionCookie(res, token);
+      const redirect = state ? decodeURIComponent(state) : "/";
+      res.redirect(redirect);
+    } catch (e) {
+      // 失败回登录页展示错误，而不是落在 JSON 报错页
+      const msg = e instanceof Error ? e.message : "OAuth 登录失败";
+      res.redirect(`/login?oauth_error=${encodeURIComponent(msg)}`);
+    }
   }
 }

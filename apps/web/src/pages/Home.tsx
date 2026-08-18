@@ -75,6 +75,14 @@ export default function Home() {
   const [category, setCategory] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [oauth, setOauth] = useState<{ enabled: boolean; name: string } | null>(null);
+
+  useEffect(() => {
+    if (user) return;
+    get<{ enabled: boolean; name: string }>("/auth/oauth-status")
+      .then(setOauth)
+      .catch(() => undefined);
+  }, [user]);
 
   const onCreate = async (e: FormEvent) => {
     e.preventDefault();
@@ -117,9 +125,11 @@ export default function Home() {
               <Link className="btn btn-lg" to="/login">
                 登录
               </Link>
-              <a className="btn btn-lg btn-ghost" href="/api/auth/oauth-initiate">
-                OAuth 登录
-              </a>
+              {oauth?.enabled && (
+                <a className="btn btn-lg btn-ghost" href="/api/auth/oauth-initiate?redirect=/">
+                  {oauth.name} 登录
+                </a>
+              )}
             </div>
           </div>
           <LiveNow />

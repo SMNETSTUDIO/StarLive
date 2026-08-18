@@ -1,14 +1,30 @@
-import { useState, type FormEvent } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useEffect, useState, type FormEvent } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { get } from "../lib/api";
 
 export default function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [account, setAccount] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [oauth, setOauth] = useState<{ enabled: boolean; name: string } | null>(null);
+
+  useEffect(() => {
+    get<{ enabled: boolean; name: string }>("/auth/oauth-status")
+      .then(setOauth)
+      .catch(() => undefined);
+    // OAuth 回调失败时带回的错误信息
+    const oauthError = searchParams.get("oauth_error");
+    if (oauthError) {
+      setError(oauthError);
+      setSearchParams({}, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -63,6 +79,18 @@ export default function Login() {
             {busy ? "登录中…" : "登录"}
           </button>
           </form>
+          {oauth?.enabled && (
+            <>
+              <div className="flex" style={{ gap: 10, margin: "16px 0" }}>
+                <span style={{ flex: 1, height: 1, background: "var(--border)" }} />
+                <span className="small muted">或</span>
+                <span style={{ flex: 1, height: 1, background: "var(--border)" }} />
+              </div>
+              <a className="btn" style={{ width: "100%" }} href="/api/auth/oauth-initiate?redirect=/">
+                使用 {oauth.name} 登录
+              </a>
+            </>
+          )}
           <p className="small muted" style={{ marginTop: 16, textAlign: "center" }}>
             还没有账号？<Link to="/register">立即注册</Link>
           </p>

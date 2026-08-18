@@ -28,6 +28,7 @@ export const config = {
   cookieSameSite: env("COOKIE_SAMESITE", "lax") as "lax" | "none" | "strict",
   cookieSecure: env("COOKIE_SECURE", "") === "true",
 
+  oauthProviderName: env("OAUTH_PROVIDER_NAME", "OAuth"),
   oauthClientId: env("OAUTH_CLIENT_ID", ""),
   oauthClientSecret: env("OAUTH_CLIENT_SECRET", ""),
   oauthRedirectUri: env("OAUTH_REDIRECT_URI", ""),

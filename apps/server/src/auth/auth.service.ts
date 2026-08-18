@@ -190,6 +190,14 @@ export class AuthService {
     return { guestId: `g_${randomUUID()}` };
   }
 
+  /** OAuth 是否已配置（前端据此决定是否展示入口）*/
+  oauthStatus(): { enabled: boolean; name: string } {
+    return {
+      enabled: Boolean(config.oauthClientId && config.oauthAuthUrl),
+      name: config.oauthProviderName,
+    };
+  }
+
   async oauthAuthorizeUrl(redirect: string): Promise<string> {
     const base = config.oauthAuthUrl;
     if (!config.oauthClientId || !base) {
@@ -238,6 +246,11 @@ export class AuthService {
     const username = `oauth_${oauthId}`;
     let user = await getUserByUsername(username);
     if (!user) {
+      // OAuth 首次登录会创建新账号，同样受「开放注册」开关约束（已有账号不受影响）
+      const regFlag = await redis().hget(Keys.systemFeatures, "registrationEnabled");
+      if (regFlag === "false" || regFlag === "0") {
+        throw new BizException(ErrorCode.FORBIDDEN, "注册已关闭，请联系管理员", 403);
+      }
       user = await createUser({
         username,
         name: info.name ?? info.username ?? username,
