@@ -7,6 +7,7 @@ const PACKAGES = [10, 50, 100, 500, 1000];
 const PROVIDER_LABELS: Record<string, string> = {
   mock: "沙箱支付（联调）",
   epay: "易支付",
+  alipay: "支付宝",
   stripe: "Stripe",
 };
 

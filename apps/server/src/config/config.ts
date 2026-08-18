@@ -46,6 +46,11 @@ export const config = {
   epayKey: env("EPAY_KEY", ""),
   epayGateway: env("EPAY_GATEWAY", ""),
 
+  alipayAppId: env("ALIPAY_APP_ID", ""),
+  alipayPrivateKey: env("ALIPAY_PRIVATE_KEY", ""),
+  alipayPublicKey: env("ALIPAY_PUBLIC_KEY", ""),
+  alipayGateway: env("ALIPAY_GATEWAY", "https://openapi.alipay.com/gateway.do"),
+
   stripeSecretKey: env("STRIPE_SECRET_KEY", ""),
   stripeWebhookSecret: env("STRIPE_WEBHOOK_SECRET", ""),
   // Stripe 计费货币：订单金额（元）按该货币单位直接计费

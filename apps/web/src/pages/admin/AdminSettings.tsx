@@ -13,11 +13,18 @@ interface Features {
 
 const PAY_PROVIDERS = [
   { value: "epay", label: "易支付" },
+  { value: "alipay", label: "支付宝" },
   { value: "stripe", label: "Stripe" },
 ] as const;
 
 const PAY_FIELD_LABELS: Record<string, Record<string, string>> = {
   epay: { pid: "商户 PID", key: "商户密钥", gateway: "网关地址（https://…）" },
+  alipay: {
+    appId: "AppID",
+    privateKey: "应用私钥（RSA2，可粘贴无头尾 base64）",
+    alipayPublicKey: "支付宝公钥",
+    gateway: "网关（默认 openapi.alipay.com）",
+  },
   stripe: { secretKey: "Secret Key", webhookSecret: "Webhook Secret", currency: "计费货币（默认 usd）" },
 };
 

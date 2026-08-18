@@ -412,9 +412,15 @@ export class AdminService {
   /** 支付网关可后台配置的字段（白名单）与其中的敏感项 */
   private static readonly PAYMENT_FIELDS: Record<string, string[]> = {
     epay: ["pid", "key", "gateway"],
+    alipay: ["appId", "privateKey", "alipayPublicKey", "gateway"],
     stripe: ["secretKey", "webhookSecret", "currency"],
   };
-  private static readonly PAYMENT_SECRET_FIELDS = new Set(["key", "secretKey", "webhookSecret"]);
+  private static readonly PAYMENT_SECRET_FIELDS = new Set([
+    "key",
+    "privateKey",
+    "secretKey",
+    "webhookSecret",
+  ]);
 
   private static maskSecret(v: string): string {
     if (v.length <= 8) return "••••••••";

@@ -84,12 +84,14 @@ export class WalletController {
         rawBody: req.rawBody?.toString("utf8") ?? "",
         headers: req.headers,
       });
-      // 易支付要求纯文本 success 应答，否则会持续重试通知
-      if (provider === "epay") return res.send("success");
+      // 易支付/支付宝要求纯文本 success 应答，否则会持续重试通知
+      if (provider === "epay" || provider === "alipay") return res.send("success");
       return res.json({ code: 0, message: "ok", data: result });
     } catch (e) {
-      // 网关发来的无关事件（如 Stripe 非支付完成事件）：应答 2xx 避免无限重试
+      // 网关发来的无关事件（如 Stripe 非支付事件、支付宝 TRADE_CLOSED）：
+      // 按各网关约定应答“已收到”，避免无限重试
       if ((e as { code?: number })?.code === ERR_CALLBACK_IGNORED) {
+        if (provider === "epay" || provider === "alipay") return res.send("success");
         return res.json({ received: true });
       }
       throw e;
