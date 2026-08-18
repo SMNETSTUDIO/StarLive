@@ -758,6 +758,174 @@ code {
     0 14px 40px rgba(48, 209, 88, 0.3);
 }
 
+/* 礼物特效层 */
+.gift-fx-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 5;
+}
+
+.gift-banners {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 78%;
+}
+
+.gift-banner {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 14px 7px 10px;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    rgba(10, 132, 255, 0.85),
+    rgba(94, 92, 230, 0.75) 70%,
+    rgba(94, 92, 230, 0.35)
+  );
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    0 8px 24px rgba(10, 132, 255, 0.4);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  color: #fff;
+  font-size: 13.5px;
+  width: fit-content;
+  animation: gift-in 0.45s var(--spring) both, gift-out 0.4s ease 3.4s forwards;
+}
+
+.gift-banner-emoji {
+  font-size: 22px;
+  animation: gift-bounce 0.9s var(--spring) infinite alternate;
+}
+
+.gift-banner-text {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.gift-banner-count {
+  font-weight: 800;
+  font-style: italic;
+  font-size: 16px;
+  color: #ffd60a;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+}
+
+@keyframes gift-in {
+  from {
+    opacity: 0;
+    transform: translateX(-40px) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes gift-out {
+  to {
+    opacity: 0;
+    transform: translateX(-16px);
+  }
+}
+
+@keyframes gift-bounce {
+  from {
+    transform: scale(1);
+  }
+  to {
+    transform: scale(1.25) rotate(-8deg);
+  }
+}
+
+/* 大额礼物中央爆发 */
+.gift-burst {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  animation: burst-fade 0.5s ease 3.2s forwards;
+}
+
+.gift-burst::before {
+  content: "";
+  position: absolute;
+  width: 320px;
+  height: 320px;
+  border-radius: 50%;
+  background: radial-gradient(
+    closest-side,
+    rgba(255, 214, 10, 0.28),
+    rgba(255, 69, 58, 0.12) 60%,
+    transparent
+  );
+  filter: blur(18px);
+  animation: burst-glow 0.6s var(--spring) both;
+}
+
+.gift-burst-emoji {
+  font-size: 96px;
+  position: relative;
+  animation: burst-pop 0.7s var(--spring) both;
+  filter: drop-shadow(0 12px 30px rgba(0, 0, 0, 0.5));
+}
+
+.gift-burst-name {
+  position: relative;
+  padding: 6px 18px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(255, 214, 10, 0.4);
+  color: #ffd60a;
+  font-weight: 600;
+  font-size: 15px;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  animation: gift-in 0.5s var(--spring) 0.15s both;
+}
+
+@keyframes burst-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.2);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.25);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes burst-glow {
+  from {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes burst-fade {
+  to {
+    opacity: 0;
+  }
+}
+
 /* 红包 */
 .rp-row {
   display: flex;
@@ -1269,12 +1437,47 @@ code {
   .hero-title {
     font-size: 38px;
   }
+  .hero {
+    padding: 44px 12px 36px;
+  }
+  .topbar {
+    padding: 10px 12px;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .logo-sub {
+    display: none;
+  }
+  .nav-links {
+    order: 3;
+    width: 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  .nav-links::-webkit-scrollbar {
+    display: none;
+  }
+  .nav-links a {
+    white-space: nowrap;
+  }
+  .footer-inner {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .quick-actions {
+    grid-template-columns: repeat(3, 1fr);
+  }
   .admin-sidebar {
     width: 100%;
     border-right: none;
     border-bottom: 1px solid rgba(255, 255, 255, 0.07);
     display: flex;
     overflow-x: auto;
+  }
+  .admin-sidebar a {
+    white-space: nowrap;
   }
   .admin-layout {
     flex-direction: column;

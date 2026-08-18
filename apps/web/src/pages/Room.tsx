@@ -1,14 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import type { DanmakuMessage, GiftDefinition } from "@starlive/shared";
+import type { DanmakuMessage, GiftDefinition, GiftMessage } from "@starlive/shared";
 import ChatPanel from "../components/ChatPanel";
 import DanmakuLayer from "../components/DanmakuLayer";
+import GiftEffectLayer, { type GiftFx } from "../components/GiftEffectLayer";
 import GiftPanel from "../components/GiftPanel";
 import LotteryPanel, { type LotteryInfo } from "../components/LotteryPanel";
 import Player from "../components/Player";
 import RedpacketPanel, { type RedpacketItem } from "../components/RedpacketPanel";
 import { useAuth } from "../context/AuthContext";
 import { ApiError, get, post } from "../lib/api";
+import { giftEmoji } from "../lib/gift-emoji";
 import { getGuestId } from "../lib/guest";
 import { getSocket } from "../lib/socket";
 
@@ -39,6 +41,7 @@ export default function Room() {
   const [redpackets, setRedpackets] = useState<RedpacketItem[]>([]);
   const [lottery, setLottery] = useState<LotteryInfo | null>(null);
   const [viewers, setViewers] = useState(0);
+  const [giftFx, setGiftFx] = useState<GiftFx[]>([]);
   const messagesRef = useRef<DanmakuMessage[]>([]);
 
   const isOwner = user?.id === room?.ownerId;
@@ -98,7 +101,31 @@ export default function Room() {
     socket.emit("join_room", { roomId });
 
     const onDanmaku = (m: DanmakuMessage) => appendMessage(m);
-    const onGift = (m: DanmakuMessage) => appendMessage(m as unknown as DanmakuMessage);
+    const onGift = (g: GiftMessage) => {
+      const emoji = giftEmoji(g.giftId, g.giftIcon);
+      // 写入聊天区
+      appendMessage({
+        id: g.id,
+        roomId: g.roomId,
+        name: g.fromName,
+        content: `送出 ${emoji} ${g.giftName} ×${g.count}`,
+        color: "#ffd60a",
+        ts: g.ts,
+      } as DanmakuMessage);
+      // 播放特效（总价 ≥520 触发全屏爆发）
+      const fx: GiftFx = {
+        id: `${g.id}_${g.ts}`,
+        emoji,
+        fromName: g.fromName,
+        giftName: g.giftName,
+        count: g.count,
+        big: g.price * g.count >= 520,
+      };
+      setGiftFx((list) => [...list.slice(-4), fx]);
+      setTimeout(() => {
+        setGiftFx((list) => list.filter((x) => x.id !== fx.id));
+      }, 3900);
+    };
     const onPresence = (p: { viewerCount: number }) => setViewers(p.viewerCount);
     const onRoomStatus = (p: { status: string }) => setRoom((r) => (r ? { ...r, status: p.status } : r));
     const onRedpacketCreated = () => loadRedpackets();
@@ -259,9 +286,11 @@ export default function Room() {
             <div style={{ position: "relative" }}>
               <Player src={room.playbackUrl} />
               <DanmakuLayer messages={messages} />
+              <GiftEffectLayer effects={giftFx} />
             </div>
           ) : (
             <div className="player-wrap" style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <GiftEffectLayer effects={giftFx} />
               <div style={{ textAlign: "center" }}>
                 <div style={{ fontSize: 48 }}>📺</div>
                 <p className="muted">主播暂未开播</p>
