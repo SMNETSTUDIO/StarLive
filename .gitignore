@@ -26,3 +26,6 @@ Thumbs.db
 # Runtime data
 recordings/
 data/
+
+# Redis 本地数据
+*.rdb

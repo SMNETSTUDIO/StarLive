@@ -1,19 +1,79 @@
 import "reflect-metadata";
 import { NestFactory } from "@nestjs/core";
+import type { NestExpressApplication } from "@nestjs/platform-express";
+import type { NextFunction, Request, Response } from "express";
+import * as fs from "fs";
+import * as http from "http";
+import * as https from "https";
+import * as path from "path";
 import { AppModule } from "./app.module";
 import { AllExceptionsFilter } from "./common/filters";
 import { TransformInterceptor } from "./common/interceptor";
 import { config } from "./config/config";
 
+/** /hls 反向代理到 MediaMTX（单端口部署，路径原样透传，与 Vite 代理行为一致） */
+function hlsProxy(target: string) {
+  const base = new URL(target);
+  const client = base.protocol === "https:" ? https : http;
+  return (req: Request, res: Response): void => {
+    const proxyReq = client.request(
+      {
+        hostname: base.hostname,
+        port: base.port || (base.protocol === "https:" ? 443 : 80),
+        path: req.originalUrl,
+        method: req.method,
+        headers: { ...req.headers, host: base.host },
+      },
+      (proxyRes) => {
+        res.writeHead(proxyRes.statusCode ?? 502, proxyRes.headers);
+        proxyRes.pipe(res);
+      },
+    );
+    proxyReq.on("error", () => {
+      if (!res.headersSent) res.status(502);
+      res.end("hls upstream unavailable");
+    });
+    req.pipe(proxyReq);
+  };
+}
+
 async function bootstrap(): Promise<void> {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
   app.setGlobalPrefix("api");
   app.enableCors({ origin: true, credentials: true });
   app.useGlobalFilters(new AllExceptionsFilter());
   app.useGlobalInterceptors(new TransformInterceptor());
+
+  // 单端口一体化：/hls 转发到 MediaMTX
+  app.use("/hls", hlsProxy(config.hlsProxyTarget));
+
+  // 单端口一体化：托管前端构建产物 + SPA 回退
+  const webDist = config.webDist || path.resolve(__dirname, "../../web/dist");
+  const hasWeb = fs.existsSync(path.join(webDist, "index.html"));
+  if (hasWeb) {
+    app.useStaticAssets(webDist, { index: "index.html" });
+    app.use((req: Request, res: Response, next: NextFunction) => {
+      const p = req.path;
+      if (
+        req.method !== "GET" ||
+        p.startsWith("/api") ||
+        p.startsWith("/socket.io") ||
+        p.startsWith("/hls") ||
+        path.extname(p) !== ""
+      ) {
+        next();
+        return;
+      }
+      res.sendFile(path.join(webDist, "index.html"));
+    });
+  }
+
   await app.listen(config.port);
   // eslint-disable-next-line no-console
-  console.log(`StarLive server listening on http://localhost:${config.port}/api`);
+  console.log(
+    `StarLive listening on http://localhost:${config.port}` +
+      (hasWeb ? " (web + api)" : "/api (web dist not found, api only)"),
+  );
 }
 
 void bootstrap();

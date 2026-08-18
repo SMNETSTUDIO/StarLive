@@ -10,8 +10,13 @@ function envInt(key: string, def: number): number {
 }
 
 export const config = {
-  port: envInt("PORT", 4000),
+  port: envInt("PORT", 3000),
   appBaseUrl: env("APP_BASE_URL", "http://localhost:3000"),
+
+  // 前端构建产物目录（留空则默认 apps/web/dist）
+  webDist: env("WEB_DIST", ""),
+  // 单端口部署时 /hls 转发目标（MediaMTX HLS 服务）
+  hlsProxyTarget: env("HLS_PROXY_TARGET", "http://localhost:8888"),
 
   redisUrl: env("REDIS_URL", "redis://localhost:6379"),
 
@@ -19,6 +24,9 @@ export const config = {
   sessionTtl: envInt("SESSION_TTL", 604800),
   sessionCookie: "session",
   viewerCookie: "viewer_session",
+  // 前端与 API 跨站部署时设 COOKIE_SAMESITE=none（要求 https）
+  cookieSameSite: env("COOKIE_SAMESITE", "lax") as "lax" | "none" | "strict",
+  cookieSecure: env("COOKIE_SECURE", "") === "true",
 
   oauthClientId: env("OAUTH_CLIENT_ID", ""),
   oauthClientSecret: env("OAUTH_CLIENT_SECRET", ""),
@@ -29,7 +37,7 @@ export const config = {
 
   streamProvider: env("STREAM_PROVIDER", "selfhosted"),
   mediamtxApi: env("MEDIAMTX_API", "http://localhost:9997"),
-  mediamtxAuthHook: env("MEDIAMTX_AUTH_HOOK", "http://localhost:4000/api/stream/hook"),
+  mediamtxAuthHook: env("MEDIAMTX_AUTH_HOOK", "http://localhost:3000/api/stream/hook"),
 
   ffmpegPath: env("FFMPEG_PATH", "ffmpeg"),
   recordingDir: env("RECORDING_DIR", "./recordings"),

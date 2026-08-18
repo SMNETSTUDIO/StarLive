@@ -8,6 +8,7 @@
     "build": "pnpm -r --sort run build",
     "dev:server": "pnpm --filter @starlive/server run start:dev",
     "dev:web": "pnpm --filter @starlive/web run dev",
-    "dev:worker": "pnpm --filter @starlive/worker run dev"
+    "dev:worker": "pnpm --filter @starlive/worker run dev",
+    "start": "node apps/server/dist/main.js"
   }
 }

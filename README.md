@@ -60,20 +60,24 @@ docker compose up -d
 docker compose --profile recording up -d
 ```
 
-对外暴露 `web(80)`，`/api`、`/ws`、HLS 经 nginx 代理；Redis 数据持久化在卷 `redis-data`，录播落盘在卷 `recordings-data`。
+前后端一体化，对外只暴露 **3000 端口**（网页 + `/api` + `/socket.io` + `/hls` 同源）；Redis 数据持久化在卷 `redis-data`，录播落盘在卷 `recordings-data`。首次访问 `http://<host>:3000` 会进入初始化向导创建管理员。
 
-### 方式二：本地开发
+### 方式二：本地运行（前后端一体化，单端口 3000）
 
 ```bash
 pnpm install
+pnpm build        # 构建前端 + 后端
+pnpm start        # 一体化服务：http://localhost:3000（网页 + /api + /socket.io + /hls）
+```
 
-# 分别启动各端
-pnpm dev:server   # NestJS 后端（:4000）
-pnpm dev:web      # Vite 前端
+首次部署打开 `http://localhost:3000`，网页会自动进入**初始化向导**，引导创建超级管理员账号密码（写入 Redis），之后即可用该账号登录管理后台 `/admin`。
+
+开发调试（可选，前端热更新）：
+
+```bash
+pnpm dev:server   # NestJS 后端（:3000）
+pnpm dev:web      # Vite 前端（:5173，/api 代理到 :3000）
 pnpm dev:worker   # 录播 Worker
-
-# 构建全部
-pnpm build
 ```
 
 需要本地 Redis（或改 `REDIS_URL` 指向 Upstash）与 MediaMTX（或用 `docker compose up -d redis mediamtx` 单独起依赖）。
@@ -84,7 +88,7 @@ pnpm build
 
 - `JWT_SECRET` — JWT 签名密钥（必填）
 - `REDIS_URL` — Redis 连接串（自托管 `redis://:password@localhost:6379` 或 Upstash）
-- `ADMIN_USER_IDS` — 超级管理员用户 ID（逗号分隔）
+- `ADMIN_USER_IDS` — （可选）通过环境变量强制指定超管用户 ID；一般无需配置，首次部署由网页初始化向导创建管理员
 - `STREAM_PROVIDER` — `selfhosted`（默认）/ `mux`；`MEDIAMTX_API` / `MEDIAMTX_AUTH_HOOK` 对应配置
 - `EPAY_*` / `ALIPAY_*` / `WECHAT_*` / `STRIPE_*` — 支付网关（按需填写，`mock` 网关可沙箱联调）
 - 凭据不提交仓库，通过 `.env` 注入

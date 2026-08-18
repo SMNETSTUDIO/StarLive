@@ -17,8 +17,8 @@ function setSessionCookie(res: Response, token: string): void {
   res.cookie(config.sessionCookie, token, {
     httpOnly: true,
     maxAge: config.sessionTtl * 1000,
-    sameSite: "lax",
-    secure: config.appBaseUrl.startsWith("https"),
+    sameSite: config.cookieSameSite,
+    secure: config.cookieSecure || config.appBaseUrl.startsWith("https"),
     path: "/",
   });
 }
@@ -26,6 +26,21 @@ function setSessionCookie(res: Response, token: string): void {
 @Controller("auth")
 export class AuthController {
   constructor(private readonly auth: AuthService) {}
+
+  @Get("setup-status")
+  async setupStatus() {
+    return { needsSetup: await this.auth.needsSetup() };
+  }
+
+  @Post("setup")
+  async setup(
+    @Body() body: { username: string; password: string; email?: string },
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const { user, token } = await this.auth.setupAdmin(body);
+    setSessionCookie(res, token);
+    return { user };
+  }
 
   @Post("register")
   async register(
@@ -70,7 +85,8 @@ export class AuthController {
     res.cookie(config.viewerCookie, guestId, {
       httpOnly: true,
       maxAge: config.sessionTtl * 1000,
-      sameSite: "lax",
+      sameSite: config.cookieSameSite,
+      secure: config.cookieSecure || config.appBaseUrl.startsWith("https"),
       path: "/",
     });
     return { guestId };

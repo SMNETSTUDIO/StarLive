@@ -1,8 +1,9 @@
 import { Injectable } from "@nestjs/common";
 import * as bcrypt from "bcryptjs";
 import { randomUUID } from "crypto";
-import { ErrorCode } from "@starlive/shared";
+import { ErrorCode, Keys } from "@starlive/shared";
 import { BizException } from "../common/errors";
+import { redis } from "../common/redis";
 import { signJwt } from "../common/jwt";
 import { resolveAdmin } from "../common/admin";
 import {
@@ -16,6 +17,46 @@ import { config } from "../config/config";
 
 @Injectable()
 export class AuthService {
+  /** 首次部署检测：Redis 中是否已存在超级管理员 */
+  async needsSetup(): Promise<boolean> {
+    if (config.adminUserIds.length > 0) return false;
+    const r = redis();
+    if (await r.get(Keys.systemSetupDone)) return false;
+    // 兼容旧部署：RBAC 中已有 super_admin 则视为已初始化
+    const roles = await r.hvals(Keys.adminUserRoles);
+    if (roles.includes("super_admin")) {
+      await r.set(Keys.systemSetupDone, "1");
+      return false;
+    }
+    return true;
+  }
+
+  /** 首次部署：创建超级管理员账号并登录 */
+  async setupAdmin(input: {
+    username: string;
+    password: string;
+    email?: string;
+  }): Promise<{ user: ReturnType<typeof toProfile>; token: string }> {
+    if (!(await this.needsSetup())) {
+      throw new BizException(ErrorCode.FORBIDDEN, "系统已完成初始化", 403);
+    }
+    const r = redis();
+    // NX 锁防止并发重复初始化
+    const locked = await r.set(Keys.systemSetupDone, "pending", "EX", 60, "NX");
+    if (!locked) {
+      throw new BizException(ErrorCode.FORBIDDEN, "系统正在初始化或已完成", 403);
+    }
+    try {
+      const created = await this.register(input);
+      await r.hset(Keys.adminUserRoles, created.id, "super_admin");
+      await r.set(Keys.systemSetupDone, "1");
+      return this.login({ account: created.username, password: input.password });
+    } catch (err) {
+      await r.del(Keys.systemSetupDone).catch(() => undefined);
+      throw err;
+    }
+  }
+
   async register(input: {
     username: string;
     password: string;

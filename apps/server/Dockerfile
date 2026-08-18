@@ -1,4 +1,4 @@
-# 构建上下文 = 仓库根目录
+# 构建上下文 = 仓库根目录（前后端一体化：server 同时托管 web 构建产物）
 FROM node:20-alpine
 
 RUN npm install -g pnpm@11.17.0
@@ -16,12 +16,14 @@ RUN pnpm install --frozen-lockfile
 
 COPY packages/shared packages/shared
 COPY apps/server apps/server
+COPY apps/web apps/web
 
 RUN pnpm --filter @starlive/shared build
 RUN pnpm --filter @starlive/server build
+RUN pnpm --filter @starlive/web build
 
 ENV NODE_ENV=production
 
 WORKDIR /app/apps/server
-EXPOSE 4000
+EXPOSE 3000
 CMD ["node", "dist/main.js"]

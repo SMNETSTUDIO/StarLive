@@ -9,6 +9,7 @@ import Maintenance from "./pages/Maintenance";
 import NotFound from "./pages/NotFound";
 
 const Home = lazy(() => import("./pages/Home"));
+const Setup = lazy(() => import("./pages/Setup"));
 const Login = lazy(() => import("./pages/Login"));
 const Register = lazy(() => import("./pages/Register"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
@@ -42,13 +43,26 @@ interface Features {
 function Shell() {
   const { user, loading, isAdmin } = useAuth();
   const [features, setFeatures] = useState<Features | null>(null);
+  const [needsSetup, setNeedsSetup] = useState<boolean | null>(null);
 
   useEffect(() => {
     get<Features>("/system/features").then(setFeatures).catch(() => undefined);
+    get<{ needsSetup: boolean }>("/auth/setup-status")
+      .then((r) => setNeedsSetup(r.needsSetup))
+      .catch(() => setNeedsSetup(false));
   }, []);
 
-  if (loading) {
+  if (loading || needsSetup === null) {
     return <Loading />;
+  }
+
+  // 首次部署：先创建超级管理员
+  if (needsSetup) {
+    return (
+      <Suspense fallback={<Loading />}>
+        <Setup onDone={() => setNeedsSetup(false)} />
+      </Suspense>
+    );
   }
 
   if (user?.banned) {

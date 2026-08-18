@@ -63,6 +63,7 @@ export const Keys = {
 
   // 系统 / 管理
   systemConfig: "system:config",
+  systemSetupDone: "system:setup_done",
   systemFeatures: "system:features",
   adminUserRoles: "admin:user_roles",
   adminRoles: "admin:roles",

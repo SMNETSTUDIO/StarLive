@@ -27,6 +27,7 @@ services:
       - "9997:9997" # 控制 API
     restart: unless-stopped
 
+  # 前后端一体化：同一容器同时提供网页 + /api + /socket.io + /hls（3000 端口）
   server:
     build:
       context: ..
@@ -34,8 +35,11 @@ services:
     env_file:
       - ../.env
     environment:
+      PORT: 3000
       REDIS_URL: redis://redis:6379
       MEDIAMTX_API: http://mediamtx:9997
+      MEDIAMTX_AUTH_HOOK: http://server:3000/api/stream/hook
+      HLS_PROXY_TARGET: http://mediamtx:8888
       RECORDING_DIR: /data/recordings
     depends_on:
       redis:
@@ -43,17 +47,7 @@ services:
       mediamtx:
         condition: service_started
     ports:
-      - "4000:4000"
-    restart: unless-stopped
-
-  web:
-    build:
-      context: ..
-      dockerfile: apps/web/Dockerfile
-    depends_on:
-      - server
-    ports:
-      - "80:80"
+      - "3000:3000"
     restart: unless-stopped
 
   worker:
