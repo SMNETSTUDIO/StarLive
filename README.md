@@ -1,0 +1,111 @@
+# StarLive 星播平台
+
+可自部署的直播互动平台，带 **星币（StarCoin）虚拟货币经济系统**：观众可充值、送礼物、发弹幕、抢红包、参与抽奖；主播可通过礼物收益提现。
+
+> 项目为 LDLive 旧版（Netlify Serverless）的重构升级版，从「无状态函数 + HTTP 轮询」迁移为「独立 NestJS 后端 + Socket.IO 实时长连接」。
+
+## ✨ 核心能力
+
+- **直播**：MediaMTX 自托管推流/播放（RTMP 入 + HLS 出），Mux 作为可选 Provider
+- **实时互动**：Socket.IO 全房广播 —— 弹幕、礼物特效、红包、抽奖、在线人数
+- **经济系统**：星币充值（多支付网关）、提现（手续费 + 资金冻结）、交易流水
+- **互动玩法**：弹幕、礼物、红包（随机/均分）、抽奖、在线心跳
+- **治理**：房管、房间禁言、敏感词过滤、举报、管理员审计日志
+- **管理后台**：RBAC 权限体系、用户/房间/提现/订单/审计/内容治理/系统设置
+- **录播**：独立 Worker（FFmpeg）转码/落盘，默认关闭，可开关
+
+## 🧱 技术栈
+
+| 层 | 技术 |
+|---|---|
+| 后端 | Node 20 · NestJS 10 · TypeScript |
+| 实时通信 | Socket.IO 4 |
+| 数据库 | Redis（ioredis，自托管或 Upstash） |
+| 推流/分发 | MediaMTX（首选）/ SRS |
+| 转码/录播 | FFmpeg（独立 Worker，可开关） |
+| 前端 | React 18 · Vite 5 · TailwindCSS · React Router · hls.js |
+| 认证 | JWT（jose，HS256）+ bcrypt 密码哈希 |
+| 支付 | PaymentProvider 多网关适配器（易支付/支付宝/微信/Stripe/mock） |
+| 构建 | pnpm workspaces（monorepo） |
+
+## 📦 仓库结构
+
+```
+StarLive/
+├── apps/
+│   ├── server/     # NestJS 后端（REST + Socket.IO 网关）
+│   ├── web/        # React 前端
+│   └── worker/     # 录播/转码 Worker（FFmpeg）
+├── packages/
+│   └── shared/     # 共享 TS 类型 / DTO / WS 事件 / Redis key / 错误码
+├── infra/
+│   ├── docker-compose.yml
+│   └── mediamtx.yml
+└── docs/
+    └── architecture.md   # 系统架构与功能规划
+```
+
+## 🚀 快速开始
+
+### 方式一：Docker 一键部署
+
+```bash
+# 准备环境变量
+cp .env.example .env
+
+# 基本启动（server + web + redis + mediamtx）
+docker compose up -d
+
+# 开启录播 Worker（FFmpeg）
+docker compose --profile recording up -d
+```
+
+对外暴露 `web(80)`，`/api`、`/ws`、HLS 经 nginx 代理；Redis 数据持久化在卷 `redis-data`，录播落盘在卷 `recordings-data`。
+
+### 方式二：本地开发
+
+```bash
+pnpm install
+
+# 分别启动各端
+pnpm dev:server   # NestJS 后端（:4000）
+pnpm dev:web      # Vite 前端
+pnpm dev:worker   # 录播 Worker
+
+# 构建全部
+pnpm build
+```
+
+需要本地 Redis（或改 `REDIS_URL` 指向 Upstash）与 MediaMTX（或用 `docker compose up -d redis mediamtx` 单独起依赖）。
+
+## 🔑 环境变量
+
+关键变量见根目录 `.env.example`：
+
+- `JWT_SECRET` — JWT 签名密钥（必填）
+- `REDIS_URL` — Redis 连接串（自托管 `redis://:password@localhost:6379` 或 Upstash）
+- `ADMIN_USER_IDS` — 超级管理员用户 ID（逗号分隔）
+- `STREAM_PROVIDER` — `selfhosted`（默认）/ `mux`；`MEDIAMTX_API` / `MEDIAMTX_AUTH_HOOK` 对应配置
+- `EPAY_*` / `ALIPAY_*` / `WECHAT_*` / `STRIPE_*` — 支付网关（按需填写，`mock` 网关可沙箱联调）
+- 凭据不提交仓库，通过 `.env` 注入
+
+## 🎬 直播链路
+
+```
+OBS ──RTMP──► MediaMTX(:1935/{streamKey})
+                ├─► HLS (fMP4) ──► 前端 hls.js 播放
+                ├─► WebRTC(可选) ──► 超低延迟
+                └─► Worker(FFmpeg) ──► 转码/落盘录制 ──► 对象存储
+```
+
+## 📡 实时协议
+
+REST 负责写操作，后端落库后经 `RealtimeGateway` 向 `room:{roomId}` 广播事件（`danmaku` / `gift` / `redpacket.*` / `lottery.*` / `presence` / `room.status` / `mute`）。客户端 Socket.IO 订阅所在房间，REST 与 WS 共用同一 JWT 鉴权。
+
+## 🗂️ 文档
+
+- [系统架构与功能规划](docs/architecture.md) — 模块清单、Redis Key 约定、支付网关抽象、分阶段实施
+
+## License
+
+Private repository — 版权所有，未经授权请勿分发。
