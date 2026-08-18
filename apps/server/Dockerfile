@@ -1,5 +1,5 @@
 # 构建上下文 = 仓库根目录（前后端一体化：server 同时托管 web 构建产物）
-FROM node:20-alpine
+FROM node:22-alpine
 
 RUN npm install -g pnpm@11.17.0
 

@@ -1,5 +1,5 @@
 # 构建上下文 = 仓库根目录
-FROM node:20-alpine AS build
+FROM node:22-alpine AS build
 
 RUN npm install -g pnpm@11.17.0
 
