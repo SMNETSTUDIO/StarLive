@@ -409,6 +409,52 @@ export class AdminService {
     return this.system.getFeatures();
   }
 
+  /** 支付网关可后台配置的字段（白名单）与其中的敏感项 */
+  private static readonly PAYMENT_FIELDS: Record<string, string[]> = {
+    epay: ["pid", "key", "gateway"],
+    stripe: ["secretKey", "webhookSecret", "currency"],
+  };
+  private static readonly PAYMENT_SECRET_FIELDS = new Set(["key", "secretKey", "webhookSecret"]);
+
+  private static maskSecret(v: string): string {
+    if (v.length <= 8) return "••••••••";
+    return `${v.slice(0, 4)}••••${v.slice(-4)}`;
+  }
+
+  async getPaymentConfig(provider: string) {
+    const fields = AdminService.PAYMENT_FIELDS[provider];
+    if (!fields) throw new BizException(ErrorCode.NOT_FOUND, "未知支付网关", 404);
+    const stored = (await redis().hgetall(Keys.paymentConfig(provider))) ?? {};
+    const config: Record<string, string> = {};
+    for (const f of fields) {
+      const v = stored[f] ?? "";
+      config[f] = v && AdminService.PAYMENT_SECRET_FIELDS.has(f) ? AdminService.maskSecret(v) : v;
+    }
+    return { provider, config };
+  }
+
+  /** 敏感字段回显为掩码；提交时含「••」的值视为未修改，空字符串表示清除（回退环境变量） */
+  async updatePaymentConfig(provider: string, partial: Record<string, string>, adminId: string) {
+    const fields = AdminService.PAYMENT_FIELDS[provider];
+    if (!fields) throw new BizException(ErrorCode.NOT_FOUND, "未知支付网关", 404);
+    const key = Keys.paymentConfig(provider);
+    const changed: string[] = [];
+    for (const f of fields) {
+      if (!(f in partial)) continue;
+      const v = String(partial[f] ?? "").trim();
+      if (v.includes("••")) continue; // 掩码原样提交 = 未修改
+      if (v === "") {
+        await redis().hdel(key, f);
+      } else {
+        await redis().hset(key, f, v);
+      }
+      changed.push(f);
+    }
+    // 审计只记字段名，不落密钥明文
+    await writeAdminAuditLog("payment_config_update", adminId, { provider, changed });
+    return this.getPaymentConfig(provider);
+  }
+
   async getConfig() {
     return this.system.getConfig();
   }

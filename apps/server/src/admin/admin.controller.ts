@@ -188,6 +188,21 @@ export class AdminController {
     return this.admin.updateFeatures(body, req.user!.sub);
   }
 
+  @Get("payment-config")
+  @UseGuards(SuperAdminGuard)
+  paymentConfig(@Query("provider") provider: string) {
+    return this.admin.getPaymentConfig(provider);
+  }
+
+  @Post("payment-config-update")
+  @UseGuards(SuperAdminGuard)
+  paymentConfigUpdate(
+    @Req() req: AuthedRequest,
+    @Body() body: { provider: string; config: Record<string, string> },
+  ) {
+    return this.admin.updatePaymentConfig(body.provider, body.config ?? {}, req.user!.sub);
+  }
+
   @Get("config")
   config() {
     return this.admin.getConfig();

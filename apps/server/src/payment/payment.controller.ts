@@ -6,7 +6,7 @@ export class PaymentController {
   constructor(private readonly payment: PaymentService) {}
 
   @Get("providers")
-  listProviders() {
-    return { providers: this.payment.listProviders() };
+  async listProviders() {
+    return { providers: await this.payment.listProviders() };
   }
 }

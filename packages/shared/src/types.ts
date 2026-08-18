@@ -160,6 +160,8 @@ export interface PaymentProvider {
   verifyCallback(payload: unknown): Promise<VerifiedPayment>;
   queryOrder(orderId: string, providerRef?: string): Promise<PaymentOrderStatus>;
   refund(orderId: string, providerRef?: string): Promise<void>;
+  /** 网关是否已配置可用；未实现视为恒可用（如 mock） */
+  isConfigured?(): Promise<boolean>;
 }
 
 export interface PayResult {

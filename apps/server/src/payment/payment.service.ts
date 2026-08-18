@@ -2,13 +2,28 @@ import { Injectable } from "@nestjs/common";
 import { createHash, createHmac, randomUUID, timingSafeEqual } from "crypto";
 import {
   ErrorCode,
+  Keys,
   type PaymentOrderStatus,
   type PaymentProvider,
   type PayResult,
   type VerifiedPayment,
 } from "@starlive/shared";
 import { BizException } from "../common/errors";
+import { redis } from "../common/redis";
 import { config } from "../config/config";
+
+/** 网关配置：后台写入的 Redis(payment:config:{provider}) 优先，环境变量兜底 */
+async function gatewayConfig(
+  provider: string,
+  envDefaults: Record<string, string>,
+): Promise<Record<string, string>> {
+  const stored = await redis().hgetall(Keys.paymentConfig(provider));
+  const merged = { ...envDefaults };
+  for (const [k, v] of Object.entries(stored ?? {})) {
+    if (v) merged[k] = v;
+  }
+  return merged;
+}
 
 /** 回调统一载荷：body 为已解析参数（GET query 与 POST body 合并），rawBody/headers 供签名校验类网关使用 */
 export interface CallbackPayload {
@@ -79,11 +94,20 @@ function epaySign(params: Record<string, string>, key: string): string {
 class EpayProvider implements PaymentProvider {
   readonly name = "epay";
 
-  private ensureConfigured(): { pid: string; key: string; gateway: string } {
-    if (!config.epayPid || !config.epayKey || !config.epayGateway) {
-      throw new BizException(5000, "易支付未配置（EPAY_PID/EPAY_KEY/EPAY_GATEWAY）");
+  private async loadConfig(): Promise<{ pid: string; key: string; gateway: string }> {
+    const c = await gatewayConfig("epay", {
+      pid: config.epayPid,
+      key: config.epayKey,
+      gateway: config.epayGateway,
+    });
+    if (!c.pid || !c.key || !c.gateway) {
+      throw new BizException(5000, "易支付未配置（后台系统设置或 EPAY_* 环境变量）");
     }
-    return { pid: config.epayPid, key: config.epayKey, gateway: config.epayGateway };
+    return { pid: c.pid, key: c.key, gateway: c.gateway.replace(/\/+$/, "") };
+  }
+
+  async isConfigured(): Promise<boolean> {
+    return this.loadConfig().then(() => true).catch(() => false);
   }
 
   async createOrder(order: {
@@ -92,7 +116,7 @@ class EpayProvider implements PaymentProvider {
     coins: number;
     subject: string;
   }): Promise<PayResult> {
-    const { pid, key, gateway } = this.ensureConfigured();
+    const { pid, key, gateway } = await this.loadConfig();
     const params: Record<string, string> = {
       pid,
       type: "alipay",
@@ -120,7 +144,7 @@ class EpayProvider implements PaymentProvider {
   }
 
   async verifyCallback(payload: unknown): Promise<VerifiedPayment> {
-    const { key } = this.ensureConfigured();
+    const { key } = await this.loadConfig();
     const { body } = asCallback(payload);
     const params = Object.fromEntries(
       Object.entries(body).map(([k, v]) => [k, String(v)]),
@@ -142,7 +166,7 @@ class EpayProvider implements PaymentProvider {
 
   /** 主动查单（彩虹易支付通用接口 api.php?act=order），失败时保守返回 pending */
   async queryOrder(orderId: string): Promise<PaymentOrderStatus> {
-    const { pid, key, gateway } = this.ensureConfigured();
+    const { pid, key, gateway } = await this.loadConfig();
     try {
       const url =
         `${gateway}/api.php?act=order&pid=${encodeURIComponent(pid)}` +
@@ -166,15 +190,32 @@ class StripeProvider implements PaymentProvider {
   readonly name = "stripe";
   private static readonly API = "https://api.stripe.com/v1";
 
-  private ensureConfigured(): { secretKey: string } {
-    if (!config.stripeSecretKey) {
-      throw new BizException(5000, "Stripe 未配置（STRIPE_SECRET_KEY）");
+  private async loadConfig(): Promise<{
+    secretKey: string;
+    webhookSecret: string;
+    currency: string;
+  }> {
+    const c = await gatewayConfig("stripe", {
+      secretKey: config.stripeSecretKey,
+      webhookSecret: config.stripeWebhookSecret,
+      currency: config.stripeCurrency,
+    });
+    if (!c.secretKey) {
+      throw new BizException(5000, "Stripe 未配置（后台系统设置或 STRIPE_SECRET_KEY）");
     }
-    return { secretKey: config.stripeSecretKey };
+    return {
+      secretKey: c.secretKey,
+      webhookSecret: c.webhookSecret ?? "",
+      currency: (c.currency || "usd").toLowerCase(),
+    };
+  }
+
+  async isConfigured(): Promise<boolean> {
+    return this.loadConfig().then(() => true).catch(() => false);
   }
 
   private async api<T>(path: string, form?: Record<string, string>): Promise<T> {
-    const { secretKey } = this.ensureConfigured();
+    const { secretKey } = await this.loadConfig();
     const res = await fetch(`${StripeProvider.API}${path}`, {
       method: form ? "POST" : "GET",
       headers: {
@@ -197,12 +238,13 @@ class StripeProvider implements PaymentProvider {
     coins: number;
     subject: string;
   }): Promise<PayResult> {
+    const { currency } = await this.loadConfig();
     const session = await this.api<{ id: string; url: string }>("/checkout/sessions", {
       mode: "payment",
       client_reference_id: order.orderId,
       "metadata[orderId]": order.orderId,
       "line_items[0][quantity]": "1",
-      "line_items[0][price_data][currency]": config.stripeCurrency,
+      "line_items[0][price_data][currency]": currency,
       "line_items[0][price_data][unit_amount]": String(Math.round(order.amount * 100)),
       "line_items[0][price_data][product_data][name]": order.subject,
       success_url: `${config.appBaseUrl}/recharge?order=${order.orderId}`,
@@ -213,8 +255,9 @@ class StripeProvider implements PaymentProvider {
 
   /** Webhook 验签：stripe-signature = t=时间戳,v1=HMAC-SHA256(secret, `${t}.${rawBody}`) */
   async verifyCallback(payload: unknown): Promise<VerifiedPayment> {
-    if (!config.stripeWebhookSecret) {
-      throw new BizException(5000, "Stripe Webhook 未配置（STRIPE_WEBHOOK_SECRET）");
+    const { webhookSecret } = await this.loadConfig();
+    if (!webhookSecret) {
+      throw new BizException(5000, "Stripe Webhook 未配置（后台系统设置或 STRIPE_WEBHOOK_SECRET）");
     }
     const { rawBody, headers } = asCallback(payload);
     const sigHeader = String(headers["stripe-signature"] ?? "");
@@ -227,7 +270,7 @@ class StripeProvider implements PaymentProvider {
     if (Math.abs(Date.now() / 1000 - Number(t)) > 300) {
       throw new BizException(5001, "Stripe 签名已过期");
     }
-    const expected = createHmac("sha256", config.stripeWebhookSecret)
+    const expected = createHmac("sha256", webhookSecret)
       .update(`${t}.${rawBody}`)
       .digest("hex");
     const a = Buffer.from(v1);
@@ -310,8 +353,14 @@ export class PaymentService {
     return p;
   }
 
-  listProviders(): string[] {
-    return [...this.providers.keys()];
+  /** 仅返回已配置可用的网关（未配置的不出现在充值页下拉） */
+  async listProviders(): Promise<string[]> {
+    const out: string[] = [];
+    for (const p of this.providers.values()) {
+      const ok = p.isConfigured ? await p.isConfigured() : true;
+      if (ok) out.push(p.name);
+    }
+    return out;
   }
 
   createOrder(

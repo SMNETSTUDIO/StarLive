@@ -11,12 +11,24 @@ interface Features {
   publicListEnabled: boolean;
 }
 
+const PAY_PROVIDERS = [
+  { value: "epay", label: "易支付" },
+  { value: "stripe", label: "Stripe" },
+] as const;
+
+const PAY_FIELD_LABELS: Record<string, Record<string, string>> = {
+  epay: { pid: "商户 PID", key: "商户密钥", gateway: "网关地址（https://…）" },
+  stripe: { secretKey: "Secret Key", webhookSecret: "Webhook Secret", currency: "计费货币（默认 usd）" },
+};
+
 export default function AdminSettings() {
   const [features, setFeatures] = useState<Features | null>(null);
   const [config, setConfig] = useState<Record<string, string>>({});
   const [annTitle, setAnnTitle] = useState("");
   const [annContent, setAnnContent] = useState("");
   const [msg, setMsg] = useState("");
+  const [payProvider, setPayProvider] = useState<string>("epay");
+  const [payConfig, setPayConfig] = useState<Record<string, string>>({});
 
   const load = () => {
     get<Features>("/admin/features").then(setFeatures).catch(() => undefined);
@@ -26,6 +38,25 @@ export default function AdminSettings() {
   useEffect(() => {
     void load();
   }, []);
+
+  useEffect(() => {
+    get<{ config: Record<string, string> }>(`/admin/payment-config?provider=${payProvider}`)
+      .then((r) => setPayConfig(r.config))
+      .catch(() => setPayConfig({}));
+  }, [payProvider]);
+
+  const savePayConfig = async () => {
+    try {
+      const r = await post<{ config: Record<string, string> }>("/admin/payment-config-update", {
+        provider: payProvider,
+        config: payConfig,
+      });
+      setPayConfig(r.config);
+      setMsg("支付网关配置已保存");
+    } catch (e) {
+      setMsg((e as Error).message);
+    }
+  };
 
   const toggle = async (key: keyof Features) => {
     if (!features) return;
@@ -96,6 +127,42 @@ export default function AdminSettings() {
           </div>
           <button className="btn btn-primary" onClick={saveConfig}>
             保存配置
+          </button>
+        </div>
+        <div className="card" style={{ gridColumn: "1 / -1" }}>
+          <h3>支付网关</h3>
+          <p className="muted small" style={{ margin: "0 0 12px" }}>
+            配置保存在数据库并即时生效，优先于环境变量；密钥回显为掩码，留空提交表示清除（回退环境变量）。
+          </p>
+          <div className="field" style={{ maxWidth: 260 }}>
+            <label>网关</label>
+            <select
+              className="select"
+              value={payProvider}
+              onChange={(e) => setPayProvider(e.target.value)}
+            >
+              {PAY_PROVIDERS.map((p) => (
+                <option key={p.value} value={p.value}>
+                  {p.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="grid grid-3">
+            {Object.entries(PAY_FIELD_LABELS[payProvider] ?? {}).map(([field, label]) => (
+              <div className="field" key={field}>
+                <label>{label}</label>
+                <input
+                  className="input"
+                  value={payConfig[field] ?? ""}
+                  spellCheck={false}
+                  onChange={(e) => setPayConfig({ ...payConfig, [field]: e.target.value })}
+                />
+              </div>
+            ))}
+          </div>
+          <button className="btn btn-primary" onClick={savePayConfig}>
+            保存网关配置
           </button>
         </div>
         <div className="card" style={{ gridColumn: "1 / -1" }}>
