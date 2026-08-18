@@ -158,13 +158,15 @@ export interface PaymentProvider {
     subject: string;
   }): Promise<PayResult>;
   verifyCallback(payload: unknown): Promise<VerifiedPayment>;
-  queryOrder(orderId: string): Promise<PaymentOrderStatus>;
-  refund(orderId: string): Promise<void>;
+  queryOrder(orderId: string, providerRef?: string): Promise<PaymentOrderStatus>;
+  refund(orderId: string, providerRef?: string): Promise<void>;
 }
 
 export interface PayResult {
   type: "form" | "url" | "qrcode";
   payload: string;
+  /** 网关侧引用（如 Stripe session id），用于后续查单/退款 */
+  providerRef?: string;
 }
 
 export interface VerifiedPayment {

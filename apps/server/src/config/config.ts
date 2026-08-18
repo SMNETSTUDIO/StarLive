@@ -46,6 +46,11 @@ export const config = {
   epayKey: env("EPAY_KEY", ""),
   epayGateway: env("EPAY_GATEWAY", ""),
 
+  stripeSecretKey: env("STRIPE_SECRET_KEY", ""),
+  stripeWebhookSecret: env("STRIPE_WEBHOOK_SECRET", ""),
+  // Stripe 计费货币：订单金额（元）按该货币单位直接计费
+  stripeCurrency: env("STRIPE_CURRENCY", "usd").toLowerCase(),
+
   // mock 支付网关：可无条件入账，仅限沙箱联调；生产环境需显式开启
   paymentMockEnabled:
     env("PAYMENT_MOCK_ENABLED", "") === "true" || env("NODE_ENV", "development") !== "production",

@@ -74,24 +74,24 @@ export class WalletService {
       coins,
       subject: `StarLive 充值 ${coins} 星币`,
     });
+    // 网关侧引用（如 Stripe session id）落库，供后续查单/退款
+    if (payResult.providerRef) {
+      await redis().hset(Keys.paymentOrder(orderId), { providerRef: payResult.providerRef });
+    }
     return { orderId, amount, coins, payResult };
   }
 
-  async paymentCallback(provider: string, payload: unknown) {
-    const verified = await this.payment.verifyCallback(provider, payload);
-    const orderId = verified.orderId;
-    if (!orderId) throw new BizException(ErrorCode.PAYMENT_VERIFY_FAILED, "订单号缺失");
-
+  /** 锁 + 幂等入账（回调 / 手动补单 / 主动对账共用）；expectAmount 传入时校验金额一致 */
+  private async creditOrder(orderId: string, tradeNo: string, expectAmount?: number) {
     const release = await acquireLock(`payment:${orderId}`, 15000);
     if (!release) throw new BizException(ErrorCode.INTERNAL, "系统繁忙");
-
     try {
       const order = await redis().hgetall(Keys.paymentOrder(orderId));
-      if (!order || !order.id) throw new BizException(ErrorCode.NOT_FOUND, "订单不存在");
+      if (!order || !order.id) throw new BizException(ErrorCode.NOT_FOUND, "订单不存在", 404);
       if (order.status === "paid") {
-        return { code: ErrorCode.ORDER_ALREADY_PAID, message: "already paid" };
+        return { alreadyPaid: true as const, coins: Number(order.coins) };
       }
-      if (Number(order.amount) !== verified.amount) {
+      if (expectAmount !== undefined && Number(order.amount) !== expectAmount) {
         throw new BizException(ErrorCode.PAYMENT_VERIFY_FAILED, "金额不一致");
       }
 
@@ -101,45 +101,53 @@ export class WalletService {
       await addTransaction(order.userId, "recharge", coins, b.coins, orderId);
 
       await redisPipeline((p) => {
-        p.hset(Keys.paymentOrder(orderId), { status: "paid", paidAt: String(Date.now()), tradeNo: verified.providerTradeNo });
+        p.hset(Keys.paymentOrder(orderId), { status: "paid", paidAt: String(Date.now()), tradeNo });
         p.zrem(Keys.paymentOrdersByStatus("pending"), orderId);
         p.zadd(Keys.paymentOrdersByStatus("paid"), Date.now(), orderId);
       });
-      return { ok: true };
+      return { alreadyPaid: false as const, coins };
     } finally {
       await release();
     }
   }
 
+  async paymentCallback(provider: string, payload: unknown) {
+    const verified = await this.payment.verifyCallback(provider, payload);
+    const orderId = verified.orderId;
+    if (!orderId) throw new BizException(ErrorCode.PAYMENT_VERIFY_FAILED, "订单号缺失");
+
+    const r = await this.creditOrder(orderId, verified.providerTradeNo, verified.amount);
+    if (r.alreadyPaid) {
+      return { code: ErrorCode.ORDER_ALREADY_PAID, message: "already paid" };
+    }
+    return { ok: true };
+  }
+
+  /** 用户主动同步订单：向网关查单，确认已支付则入账（支付跳转返回 / 回调丢失时使用） */
+  async syncOrder(userId: string, orderId: string) {
+    const order = await redis().hgetall(Keys.paymentOrder(orderId));
+    if (!order || !order.id) throw new BizException(ErrorCode.NOT_FOUND, "订单不存在", 404);
+    if (order.userId !== userId) throw new BizException(ErrorCode.FORBIDDEN, "无权操作该订单", 403);
+    if (order.status === "paid") return { status: "paid", coins: Number(order.coins) };
+
+    const status = await this.payment.queryOrder(
+      order.provider,
+      orderId,
+      order.providerRef || undefined,
+    );
+    if (status !== "paid") return { status: order.status };
+
+    const r = await this.creditOrder(orderId, `sync_${order.provider}`);
+    return { status: "paid", coins: r.coins };
+  }
+
   /** 管理员手动补单：跳过网关验签，直接将 pending 订单入账（回调丢失时使用） */
   async adminCompleteOrder(orderId: string) {
-    const release = await acquireLock(`payment:${orderId}`, 15000);
-    if (!release) throw new BizException(ErrorCode.INTERNAL, "系统繁忙");
-    try {
-      const order = await redis().hgetall(Keys.paymentOrder(orderId));
-      if (!order || !order.id) throw new BizException(ErrorCode.NOT_FOUND, "订单不存在", 404);
-      if (order.status === "paid") {
-        throw new BizException(ErrorCode.ORDER_ALREADY_PAID, "订单已是已支付状态");
-      }
-
-      const coins = Number(order.coins);
-      await applyBalanceDelta(order.userId, { coins, totalRecharged: coins });
-      const b = await getBalance(order.userId);
-      await addTransaction(order.userId, "recharge", coins, b.coins, orderId);
-
-      await redisPipeline((p) => {
-        p.hset(Keys.paymentOrder(orderId), {
-          status: "paid",
-          paidAt: String(Date.now()),
-          tradeNo: "admin_manual",
-        });
-        p.zrem(Keys.paymentOrdersByStatus("pending"), orderId);
-        p.zadd(Keys.paymentOrdersByStatus("paid"), Date.now(), orderId);
-      });
-      return { ok: true, coins };
-    } finally {
-      await release();
+    const r = await this.creditOrder(orderId, "admin_manual");
+    if (r.alreadyPaid) {
+      throw new BizException(ErrorCode.ORDER_ALREADY_PAID, "订单已是已支付状态");
     }
+    return { ok: true, coins: r.coins };
   }
 
   async requestWithdrawal(userId: string, amount: number) {

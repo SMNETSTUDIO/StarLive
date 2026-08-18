@@ -24,6 +24,8 @@ export const ErrorCode = {
 
   PAYMENT_VERIFY_FAILED: 5001,
   ORDER_ALREADY_PAID: 5002,
+  /** 网关回调中的无关事件（如 Stripe 非支付完成事件），应答 2xx 忽略 */
+  PAYMENT_CALLBACK_IGNORED: 5102,
 
   DUPLICATE_CLAIM: 6001,
   REDPACKET_EXPIRED: 6002,

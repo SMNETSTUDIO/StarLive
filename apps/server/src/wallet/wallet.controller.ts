@@ -7,9 +7,13 @@ import {
   Post,
   Query,
   Req,
+  Res,
   UseGuards,
+  type RawBodyRequest,
 } from "@nestjs/common";
+import type { Request, Response } from "express";
 import { AuthGuard, type AuthedRequest } from "../common/guards";
+import { ERR_CALLBACK_IGNORED } from "../payment/payment.service";
 import { WalletService } from "./wallet.service";
 
 @Controller()
@@ -58,13 +62,37 @@ export class WalletController {
     return this.wallet.createOrder(req.user!.sub, body.coins, body.provider ?? "epay");
   }
 
+  @Post("payment/order-sync")
+  @UseGuards(AuthGuard)
+  syncOrder(@Req() req: AuthedRequest, @Body() body: { orderId: string }) {
+    return this.wallet.syncOrder(req.user!.sub, body.orderId);
+  }
+
   @All("payment/callback/:provider")
-  paymentCallback(
+  async paymentCallback(
     @Param("provider") provider: string,
     @Body() body: Record<string, unknown>,
     @Query() query: Record<string, string>,
+    @Req() req: RawBodyRequest<Request>,
+    @Res() res: Response,
   ) {
-    // 易支付等网关异步通知使用 GET 查询参数，需合并 query 与 body
-    return this.wallet.paymentCallback(provider, { ...query, ...body });
+    try {
+      // 易支付等网关异步通知使用 GET 查询参数，需合并 query 与 body；
+      // rawBody/headers 供 Stripe 等签名校验类网关使用
+      const result = await this.wallet.paymentCallback(provider, {
+        body: { ...query, ...body },
+        rawBody: req.rawBody?.toString("utf8") ?? "",
+        headers: req.headers,
+      });
+      // 易支付要求纯文本 success 应答，否则会持续重试通知
+      if (provider === "epay") return res.send("success");
+      return res.json({ code: 0, message: "ok", data: result });
+    } catch (e) {
+      // 网关发来的无关事件（如 Stripe 非支付完成事件）：应答 2xx 避免无限重试
+      if ((e as { code?: number })?.code === ERR_CALLBACK_IGNORED) {
+        return res.json({ received: true });
+      }
+      throw e;
+    }
   }
 }

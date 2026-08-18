@@ -1,7 +1,14 @@
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { get, post } from "../lib/api";
 
 const PACKAGES = [10, 50, 100, 500, 1000];
+
+const PROVIDER_LABELS: Record<string, string> = {
+  mock: "沙箱支付（联调）",
+  epay: "易支付",
+  stripe: "Stripe",
+};
 
 interface Balance {
   coins: number;
@@ -12,16 +19,43 @@ interface Balance {
 export default function Recharge() {
   const [balance, setBalance] = useState<Balance | null>(null);
   const [coins, setCoins] = useState(100);
-  const [provider, setProvider] = useState("mock");
-  const [providers, setProviders] = useState<string[]>(["mock"]);
+  const [provider, setProvider] = useState("");
+  const [providers, setProviders] = useState<string[]>([]);
   const [payResult, setPayResult] = useState<{ type: string; payload: string } | null>(null);
   const [error, setError] = useState("");
+  const [syncMsg, setSyncMsg] = useState("");
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const loadBalance = () => {
+    get<Balance>("/balance").then(setBalance).catch(() => undefined);
+  };
 
   useEffect(() => {
-    get<Balance>("/balance").then(setBalance).catch(() => undefined);
+    loadBalance();
     get<{ providers: string[] }>("/payment/providers")
-      .then((r) => setProviders(r.providers))
+      .then((r) => {
+        setProviders(r.providers);
+        setProvider((cur) => (r.providers.includes(cur) ? cur : r.providers[0] ?? ""));
+      })
       .catch(() => undefined);
+  }, []);
+
+  // 支付跳转返回：携带 ?order= 时主动向网关对账
+  useEffect(() => {
+    const orderId = searchParams.get("order");
+    if (!orderId) return;
+    setSearchParams({}, { replace: true });
+    post<{ status: string; coins?: number }>("/payment/order-sync", { orderId })
+      .then((r) => {
+        if (r.status === "paid") {
+          setSyncMsg(`✅ 充值成功，已到账 ${r.coins ?? ""} 星币`);
+          loadBalance();
+        } else {
+          setSyncMsg("⏳ 支付确认中，网关回调到达后自动入账；如已付款可稍后刷新本页");
+        }
+      })
+      .catch((e) => setSyncMsg((e as Error).message));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const onCreate = async () => {
@@ -52,6 +86,7 @@ export default function Recharge() {
         </div>
         <div className="card" style={{ marginTop: 16 }}>
         <h2 style={{ fontSize: 20 }}>充值星币</h2>
+        {syncMsg && <div className="alert alert-success">{syncMsg}</div>}
         {error && <div className="alert alert-error">{error}</div>}
         <div className="field">
           <label>充值金额（星币）</label>
@@ -83,12 +118,12 @@ export default function Recharge() {
           <select className="select" value={provider} onChange={(e) => setProvider(e.target.value)}>
             {providers.map((p) => (
               <option key={p} value={p}>
-                {p}
+                {PROVIDER_LABELS[p] ?? p}
               </option>
             ))}
           </select>
         </div>
-        <button className="btn btn-primary" style={{ width: "100%" }} onClick={onCreate}>
+        <button className="btn btn-primary" style={{ width: "100%" }} onClick={onCreate} disabled={!provider}>
           创建订单
         </button>
         {payResult && (
@@ -106,11 +141,11 @@ export default function Recharge() {
             ) : (
               <div>
                 <p>点击下方完成支付：</p>
-                <a href={payResult.payload} target="_blank" rel="noreferrer" className="btn btn-primary">
+                <a href={payResult.payload} className="btn btn-primary">
                   去支付
                 </a>
                 <p className="small muted" style={{ marginTop: 8 }}>
-                  （mock 网关为演示模式，支付后请刷新余额）
+                  支付完成后会自动跳回本页并确认到账
                 </p>
               </div>
             )}
