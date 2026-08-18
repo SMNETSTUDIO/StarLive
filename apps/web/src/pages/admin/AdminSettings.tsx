@@ -4,6 +4,7 @@ import { get, post } from "../../lib/api";
 interface Features {
   maintenanceEnabled: boolean;
   maintenanceMessage?: string;
+  registrationEnabled: boolean;
   recordingEnabled: boolean;
   transcodingEnabled: boolean;
   lotteryEnabled: boolean;
@@ -54,6 +55,7 @@ export default function AdminSettings() {
             (
               [
                 ["maintenanceEnabled", "维护模式"],
+                ["registrationEnabled", "开放注册"],
                 ["recordingEnabled", "录播（默认关闭）"],
                 ["transcodingEnabled", "转码（默认关闭）"],
                 ["lotteryEnabled", "抽奖"],

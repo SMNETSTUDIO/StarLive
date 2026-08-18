@@ -119,6 +119,7 @@ export interface WithdrawalRequest {
 export interface SystemFeatures {
   maintenanceEnabled: boolean;
   maintenanceMessage?: string;
+  registrationEnabled: boolean;
   recordingEnabled: boolean;
   transcodingEnabled: boolean;
   lotteryEnabled: boolean;

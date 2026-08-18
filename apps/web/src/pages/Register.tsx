@@ -1,6 +1,7 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { get } from "../lib/api";
 
 export default function Register() {
   const { register } = useAuth();
@@ -10,6 +11,13 @@ export default function Register() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [regOpen, setRegOpen] = useState(true);
+
+  useEffect(() => {
+    get<{ registrationEnabled: boolean }>("/system/features")
+      .then((f) => setRegOpen(f.registrationEnabled !== false))
+      .catch(() => undefined);
+  }, []);
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -33,6 +41,18 @@ export default function Register() {
           <h2>创建账号</h2>
           <p>加入 StarLive，开启你的直播之旅</p>
         </div>
+        {!regOpen ? (
+          <div className="card" style={{ textAlign: "center", padding: "36px 24px" }}>
+            <div style={{ fontSize: 36, marginBottom: 10 }}>🚪</div>
+            <h3 style={{ marginBottom: 6 }}>注册暂未开放</h3>
+            <p className="muted small" style={{ margin: "0 0 18px" }}>
+              管理员已关闭新用户注册，如需账号请联系管理员
+            </p>
+            <Link className="btn" to="/login">
+              已有账号？去登录
+            </Link>
+          </div>
+        ) : (
         <div className="card">
           <form onSubmit={onSubmit}>
           {error && <div className="alert alert-error">{error}</div>}
@@ -80,6 +100,7 @@ export default function Register() {
             已有账号？<Link to="/login">登录</Link>
           </p>
         </div>
+        )}
       </div>
     </div>
   );

@@ -63,6 +63,11 @@ export class AuthService {
     password: string;
     email?: string;
   }): Promise<{ id: string; username: string }> {
+    // 系统开关：管理后台可关闭开放注册（默认开启）
+    const regFlag = await redis().hget(Keys.systemFeatures, "registrationEnabled");
+    if (regFlag === "false" || regFlag === "0") {
+      throw new BizException(ErrorCode.FORBIDDEN, "注册已关闭，请联系管理员", 403);
+    }
     const username = (input.username ?? "").trim();
     const email = (input.email ?? "").trim() || undefined;
 

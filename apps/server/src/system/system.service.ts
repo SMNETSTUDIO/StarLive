@@ -4,6 +4,7 @@ import { redis } from "../common/redis";
 
 const DEFAULT_FEATURES: SystemFeatures = {
   maintenanceEnabled: false,
+  registrationEnabled: true,
   recordingEnabled: false,
   transcodingEnabled: false,
   lotteryEnabled: true,
@@ -28,6 +29,7 @@ export class SystemService {
     const raw = await r.hgetall(Keys.systemFeatures);
     return {
       maintenanceEnabled: toBool(raw.maintenanceEnabled, DEFAULT_FEATURES.maintenanceEnabled),
+      registrationEnabled: toBool(raw.registrationEnabled, DEFAULT_FEATURES.registrationEnabled),
       recordingEnabled: toBool(raw.recordingEnabled, DEFAULT_FEATURES.recordingEnabled),
       transcodingEnabled: toBool(raw.transcodingEnabled, DEFAULT_FEATURES.transcodingEnabled),
       lotteryEnabled: toBool(raw.lotteryEnabled, DEFAULT_FEATURES.lotteryEnabled),

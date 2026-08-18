@@ -52,6 +52,7 @@ const CARDS: {
 
 const FEATURE_LABELS: Record<string, string> = {
   maintenanceEnabled: "维护模式",
+  registrationEnabled: "开放注册",
   recordingEnabled: "录播",
   transcodingEnabled: "转码",
   lotteryEnabled: "抽奖",
