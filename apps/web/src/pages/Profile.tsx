@@ -18,6 +18,14 @@ interface Tx {
   ts: number | string;
 }
 
+interface FollowingItem {
+  userId: string;
+  name: string;
+  avatarUrl?: string;
+  roomId?: string;
+  live: boolean;
+}
+
 const TX_LABELS: Record<string, string> = {
   recharge: "充值",
   gift_send: "送礼",
@@ -38,8 +46,12 @@ export default function Profile() {
   const [confirmPwd, setConfirmPwd] = useState("");
   const [balance, setBalance] = useState<Balance | null>(null);
   const [txs, setTxs] = useState<Tx[]>([]);
+  const [followings, setFollowings] = useState<FollowingItem[]>([]);
   const [msg, setMsg] = useState("");
   const [error, setError] = useState("");
+
+  const loadFollowings = () =>
+    get<FollowingItem[]>("/room/following").then(setFollowings).catch(() => undefined);
 
   useEffect(() => {
     if (!user) return;
@@ -51,7 +63,17 @@ export default function Profile() {
   useEffect(() => {
     get<Balance>("/balance").then(setBalance).catch(() => undefined);
     get<Tx[]>("/balance/transactions?limit=20").then(setTxs).catch(() => undefined);
+    void loadFollowings();
   }, []);
+
+  const unfollow = async (targetUserId: string) => {
+    try {
+      await post("/room/unfollow", { targetUserId });
+      void loadFollowings();
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  };
 
   if (!user) {
     return (
@@ -204,6 +226,34 @@ export default function Profile() {
             </button>
           </form>
         </div>
+      </div>
+
+      {/* 我的关注 */}
+      <div className="card" style={{ marginTop: 16 }}>
+        <h3 style={{ fontSize: 16 }}>❤️ 我的关注</h3>
+        {followings.length === 0 ? (
+          <div className="muted small" style={{ padding: "8px 0" }}>
+            还没有关注的主播，去 <Link to="/live-list">直播广场</Link> 逛逛
+          </div>
+        ) : (
+          followings.map((f) => (
+            <div className="list-row" key={f.userId}>
+              <span className="avatar" style={{ width: 30, height: 30, fontSize: 13 }}>
+                {f.avatarUrl ? <img src={f.avatarUrl} alt="" /> : f.name?.[0] ?? "U"}
+              </span>
+              <span className="grow">{f.name}</span>
+              {f.live && <span className="badge badge-live">直播中</span>}
+              {f.roomId && (
+                <Link className="btn btn-sm" to={`/room/${f.roomId}`}>
+                  进入直播间
+                </Link>
+              )}
+              <button className="btn btn-sm btn-ghost" onClick={() => unfollow(f.userId)}>
+                取关
+              </button>
+            </div>
+          ))
+        )}
       </div>
 
       {/* 钱包 */}

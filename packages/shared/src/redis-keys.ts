@@ -13,6 +13,8 @@ export const Keys = {
   userDistribute: (id: string) => `user:distribute:${id}`,
   userWithdrawals: (id: string) => `user:withdrawals:${id}`,
   userOrders: (id: string) => `user:orders:${id}`,
+  userFollowing: (id: string) => `user:following:${id}`,
+  userFollowers: (id: string) => `user:followers:${id}`,
 
   // 房间
   room: (roomId: string) => `room:${roomId}`,

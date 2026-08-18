@@ -104,6 +104,30 @@ export class RoomsController {
     });
   }
 
+  @Post("follow")
+  @UseGuards(AuthGuard)
+  follow(@Req() req: AuthedRequest, @Body() body: { targetUserId: string }) {
+    return this.rooms.follow(req.user!.sub, body.targetUserId);
+  }
+
+  @Post("unfollow")
+  @UseGuards(AuthGuard)
+  unfollow(@Req() req: AuthedRequest, @Body() body: { targetUserId: string }) {
+    return this.rooms.unfollow(req.user!.sub, body.targetUserId);
+  }
+
+  @Get("follow-status")
+  @UseGuards(OptionalAuthGuard)
+  followStatus(@Req() req: AuthedRequest, @Query("targetUserId") targetUserId: string) {
+    return this.rooms.followStatus(req.user?.sub, targetUserId);
+  }
+
+  @Get("following")
+  @UseGuards(AuthGuard)
+  following(@Req() req: AuthedRequest) {
+    return this.rooms.followingList(req.user!.sub);
+  }
+
   @Post(":roomId/stream-status")
   @UseGuards(AuthGuard)
   setStatus(

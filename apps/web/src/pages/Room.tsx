@@ -45,6 +45,7 @@ export default function Room() {
   const [giftFx, setGiftFx] = useState<GiftFx[]>([]);
   const [rewards, setRewards] = useState<RewardRecord[]>([]);
   const [shared, setShared] = useState(false);
+  const [follow, setFollow] = useState<{ followers: number; following: boolean } | null>(null);
   const messagesRef = useRef<DanmakuMessage[]>([]);
 
   const isOwner = user?.id === room?.ownerId;
@@ -89,6 +90,33 @@ export default function Room() {
   const loadRewards = useCallback(() => {
     get<RewardRecord[]>(`/gift/room-rewards?roomId=${roomId}`).then(setRewards).catch(() => undefined);
   }, [roomId]);
+
+  // 关注状态（依赖房主 ID，房间加载后触发）
+  useEffect(() => {
+    if (!room?.ownerId) return;
+    get<{ followers: number; following: boolean }>(
+      `/room/follow-status?targetUserId=${room.ownerId}`,
+    )
+      .then(setFollow)
+      .catch(() => undefined);
+  }, [room?.ownerId]);
+
+  const toggleFollow = async () => {
+    if (!room) return;
+    if (!user) {
+      window.location.href = "/login";
+      return;
+    }
+    try {
+      const r = await post<{ followers: number; following: boolean }>(
+        follow?.following ? "/room/unfollow" : "/room/follow",
+        { targetUserId: room.ownerId },
+      );
+      setFollow(r);
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  };
 
   useEffect(() => {
     const saved = sessionStorage.getItem(`room_pwd_${roomId}`) ?? undefined;
@@ -276,6 +304,17 @@ export default function Room() {
           <span className="muted small">{viewers} 人在看</span>
         </div>
         <div className="flex">
+          {!isOwner && follow && (
+            <button
+              className={`btn btn-sm ${follow.following ? "" : "btn-primary"}`}
+              onClick={toggleFollow}
+            >
+              {follow.following ? "✓ 已关注" : "+ 关注"}
+              {follow.followers > 0 && (
+                <span style={{ opacity: 0.75, marginLeft: 4 }}>{follow.followers}</span>
+              )}
+            </button>
+          )}
           <button
             className="btn btn-sm"
             onClick={() => {

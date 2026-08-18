@@ -262,4 +262,72 @@ export class RoomsService {
     void _p;
     return rest;
   }
+
+  /** 关注主播 */
+  async follow(userId: string, targetUserId: string) {
+    if (userId === targetUserId) {
+      throw new BizException(ErrorCode.INVALID_AMOUNT, "不能关注自己");
+    }
+    const { getUserById } = await import("../common/user-store");
+    const target = await getUserById(targetUserId);
+    if (!target) throw new BizException(ErrorCode.NOT_FOUND, "用户不存在", 404);
+    await redisPipeline((p) => {
+      p.sadd(Keys.userFollowing(userId), targetUserId);
+      p.sadd(Keys.userFollowers(targetUserId), userId);
+    });
+    return this.followStatus(userId, targetUserId);
+  }
+
+  /** 取消关注 */
+  async unfollow(userId: string, targetUserId: string) {
+    await redisPipeline((p) => {
+      p.srem(Keys.userFollowing(userId), targetUserId);
+      p.srem(Keys.userFollowers(targetUserId), userId);
+    });
+    return this.followStatus(userId, targetUserId);
+  }
+
+  /** 关注状态：粉丝数 + 我是否已关注 */
+  async followStatus(userId: string | undefined, targetUserId: string) {
+    const r = redis();
+    const followers = await r.scard(Keys.userFollowers(targetUserId));
+    const following = userId
+      ? (await r.sismember(Keys.userFollowing(userId), targetUserId)) === 1
+      : false;
+    return { followers, following };
+  }
+
+  /** 我关注的主播列表（含直播间与开播状态） */
+  async followingList(userId: string) {
+    const ids = await redis().smembers(Keys.userFollowing(userId));
+    if (ids.length === 0) return [];
+    const { getUserById } = await import("../common/user-store");
+    const result: {
+      userId: string;
+      name: string;
+      avatarUrl?: string;
+      roomId?: string;
+      live: boolean;
+    }[] = [];
+    for (const id of ids) {
+      const u = await getUserById(id);
+      if (!u) continue;
+      const roomIds = await redis().smembers(Keys.userRooms(id));
+      const roomId = roomIds[0];
+      let live = false;
+      if (roomId) {
+        const room = await getRoom(roomId);
+        live = room?.status === "active";
+      }
+      result.push({
+        userId: id,
+        name: u.name ?? u.username,
+        avatarUrl: u.avatarUrl,
+        roomId,
+        live,
+      });
+    }
+    // 开播的排前面
+    return result.sort((a, b) => Number(b.live) - Number(a.live));
+  }
 }
