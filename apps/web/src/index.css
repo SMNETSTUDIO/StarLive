@@ -1470,6 +1470,49 @@ code {
   color: var(--yellow);
 }
 
+/* 表情面板 */
+.emoji-panel {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 2px;
+  padding: 8px;
+  margin-bottom: 8px;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--glass-border);
+  animation: page-in 0.25s var(--spring) both;
+}
+
+.emoji-btn {
+  border: none;
+  background: transparent;
+  font-size: 19px;
+  padding: 5px 0;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s var(--ease), transform 0.15s var(--spring);
+  line-height: 1.2;
+}
+
+.emoji-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  transform: scale(1.2);
+}
+
+.emoji-active {
+  background: rgba(10, 132, 255, 0.18) !important;
+}
+
+.chat-counter {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 11px;
+  color: var(--text-faint);
+  pointer-events: none;
+}
+
 /* 管理后台侧栏 */
 .admin-layout {
   display: flex;

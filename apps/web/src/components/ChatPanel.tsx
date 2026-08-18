@@ -1,6 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import type { DanmakuMessage } from "@starlive/shared";
 
+const EMOJIS = [
+  "😀", "😂", "🤣", "😍", "😎", "🥳", "😭", "🤔",
+  "👍", "👏", "🙌", "💪", "🔥", "❤️", "💖", "✨",
+  "🎉", "🎊", "🚀", "⭐", "🌹", "🧧", "😱", "666",
+];
+
 export default function ChatPanel({
   messages,
   onSend,
@@ -9,6 +15,7 @@ export default function ChatPanel({
   onSend: (content: string) => void;
 }) {
   const [text, setText] = useState("");
+  const [showEmoji, setShowEmoji] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -20,6 +27,11 @@ export default function ChatPanel({
     if (!text.trim()) return;
     onSend(text.trim());
     setText("");
+    setShowEmoji(false);
+  };
+
+  const addEmoji = (e: string) => {
+    setText((t) => (t + e).slice(0, 30));
   };
 
   return (
@@ -39,15 +51,37 @@ export default function ChatPanel({
           </div>
         ))}
       </div>
-      <div className="flex">
-        <input
-          className="input"
-          placeholder="发条弹幕…"
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && submit()}
-          maxLength={30}
-        />
+      {showEmoji && (
+        <div className="emoji-panel">
+          {EMOJIS.map((e) => (
+            <button key={e} className="emoji-btn" onClick={() => addEmoji(e)}>
+              {e}
+            </button>
+          ))}
+        </div>
+      )}
+      <div className="flex" style={{ gap: 8 }}>
+        <button
+          className={`btn btn-sm btn-ghost${showEmoji ? " emoji-active" : ""}`}
+          style={{ padding: "6px 10px", fontSize: 17 }}
+          title="表情"
+          onClick={() => setShowEmoji((v) => !v)}
+        >
+          😀
+        </button>
+        <div style={{ flex: 1, position: "relative" }}>
+          <input
+            className="input"
+            placeholder="发条弹幕…"
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && submit()}
+            maxLength={30}
+          />
+          {text.length >= 20 && (
+            <span className="chat-counter">{text.length}/30</span>
+          )}
+        </div>
         <button className="btn btn-primary" onClick={submit}>
           发送
         </button>
