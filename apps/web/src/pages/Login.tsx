@@ -26,9 +26,14 @@ export default function Login() {
 
   return (
     <div className="container">
-      <div className="card" style={{ maxWidth: 400, margin: "40px auto" }}>
-        <h2>登录</h2>
-        <form onSubmit={onSubmit}>
+      <div className="auth-wrap">
+        <div className="auth-head">
+          <span className="auth-mark">⭐</span>
+          <h2>欢迎回来</h2>
+          <p>登录 StarLive，继续你的直播之旅</p>
+        </div>
+        <div className="card">
+          <form onSubmit={onSubmit}>
           {error && <div className="alert alert-error">{error}</div>}
           <div className="field">
             <label>用户名 / 邮箱</label>
@@ -52,10 +57,11 @@ export default function Login() {
           <button className="btn btn-primary" style={{ width: "100%" }} disabled={busy}>
             {busy ? "登录中…" : "登录"}
           </button>
-        </form>
-        <p className="small muted" style={{ marginTop: 16 }}>
-          还没有账号？<Link to="/register">立即注册</Link>
-        </p>
+          </form>
+          <p className="small muted" style={{ marginTop: 16, textAlign: "center" }}>
+            还没有账号？<Link to="/register">立即注册</Link>
+          </p>
+        </div>
       </div>
     </div>
   );

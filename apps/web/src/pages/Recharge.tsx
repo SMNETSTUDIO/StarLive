@@ -40,27 +40,38 @@ export default function Recharge() {
 
   return (
     <div className="container">
-      <div className="card" style={{ maxWidth: 480, margin: "40px auto" }}>
-        <h2>充值星币</h2>
-        <p className="muted">当前余额：{balance?.coins ?? 0} SC</p>
+      <div style={{ maxWidth: 480, margin: "24px auto 0" }}>
+        <div className="balance-card">
+          <span className="small" style={{ opacity: 0.85 }}>
+            当前余额
+          </span>
+          <div className="balance-num">
+            ⭐ {balance?.coins ?? 0}
+            <span className="balance-unit">SC</span>
+          </div>
+        </div>
+        <div className="card" style={{ marginTop: 16 }}>
+        <h2 style={{ fontSize: 20 }}>充值星币</h2>
         {error && <div className="alert alert-error">{error}</div>}
         <div className="field">
           <label>充值金额（星币）</label>
-          <div className="flex wrap">
+          <div className="grid" style={{ gridTemplateColumns: "repeat(5, 1fr)", gap: 8 }}>
             {PACKAGES.map((p) => (
-              <button
+              <div
                 key={p}
-                className={`btn btn-sm ${coins === p ? "btn-primary" : ""}`}
+                className={`gift-tile${coins === p ? " selected" : ""}`}
                 onClick={() => setCoins(p)}
               >
-                {p} SC
-              </button>
+                <div style={{ fontWeight: 600 }}>{p}</div>
+                <div className="small muted">SC</div>
+              </div>
             ))}
           </div>
           <input
             className="input"
-            style={{ marginTop: 8 }}
+            style={{ marginTop: 10 }}
             type="number"
+            placeholder="自定义金额"
             value={coins}
             onChange={(e) => setCoins(Number(e.target.value))}
           />
@@ -75,7 +86,7 @@ export default function Recharge() {
             ))}
           </select>
         </div>
-        <button className="btn btn-primary" onClick={onCreate}>
+        <button className="btn btn-primary" style={{ width: "100%" }} onClick={onCreate}>
           创建订单
         </button>
         {payResult && (
@@ -103,6 +114,7 @@ export default function Recharge() {
             )}
           </div>
         )}
+        </div>
       </div>
     </div>
   );

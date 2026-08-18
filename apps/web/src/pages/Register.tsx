@@ -27,9 +27,14 @@ export default function Register() {
 
   return (
     <div className="container">
-      <div className="card" style={{ maxWidth: 400, margin: "40px auto" }}>
-        <h2>注册</h2>
-        <form onSubmit={onSubmit}>
+      <div className="auth-wrap">
+        <div className="auth-head">
+          <span className="auth-mark">✨</span>
+          <h2>创建账号</h2>
+          <p>加入 StarLive，开启你的直播之旅</p>
+        </div>
+        <div className="card">
+          <form onSubmit={onSubmit}>
           {error && <div className="alert alert-error">{error}</div>}
           <div className="field">
             <label>用户名（2-20 位）</label>
@@ -62,10 +67,11 @@ export default function Register() {
           <button className="btn btn-primary" style={{ width: "100%" }} disabled={busy}>
             {busy ? "注册中…" : "注册"}
           </button>
-        </form>
-        <p className="small muted" style={{ marginTop: 16 }}>
-          已有账号？<Link to="/login">登录</Link>
-        </p>
+          </form>
+          <p className="small muted" style={{ marginTop: 16, textAlign: "center" }}>
+            已有账号？<Link to="/login">登录</Link>
+          </p>
+        </div>
       </div>
     </div>
   );

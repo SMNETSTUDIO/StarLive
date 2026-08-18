@@ -33,6 +33,7 @@ export default function Room() {
   const [password, setPassword] = useState("");
   const [needPassword, setNeedPassword] = useState(false);
   const [error, setError] = useState("");
+  const [copied, setCopied] = useState(false);
   const [messages, setMessages] = useState<DanmakuMessage[]>([]);
   const [gifts, setGifts] = useState<GiftDefinition[]>([]);
   const [redpackets, setRedpackets] = useState<RedpacketItem[]>([]);
@@ -275,9 +276,25 @@ export default function Room() {
           )}
           {isOwner && room.streamKey && (
             <div className="card small" style={{ marginTop: 12 }}>
-              <b>推流信息（OBS）</b>
-              <p>服务器：<code>rtmp://&lt;host&gt;:1935</code></p>
-              <p>串流密钥：<code>{room.streamKey}</code></p>
+              <div className="flex between" style={{ marginBottom: 8 }}>
+                <b>📡 推流信息（OBS）</b>
+                <button
+                  className="btn btn-sm btn-ghost"
+                  onClick={() => {
+                    void navigator.clipboard?.writeText(room.streamKey ?? "");
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 1500);
+                  }}
+                >
+                  {copied ? "✓ 已复制" : "复制密钥"}
+                </button>
+              </div>
+              <p style={{ margin: "4px 0" }}>
+                服务器：<code>rtmp://&lt;host&gt;:1935</code>
+              </p>
+              <p style={{ margin: "4px 0" }}>
+                串流密钥：<code>{room.streamKey}</code>
+              </p>
             </div>
           )}
         </div>

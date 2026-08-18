@@ -13,7 +13,9 @@ export default function TopBar() {
   return (
     <header className="topbar">
       <Link to="/" className="logo">
-        ⭐ StarLive 星播平台
+        <span className="logo-mark">⭐</span>
+        StarLive
+        <span className="logo-sub">星播平台</span>
       </Link>
       <nav className="nav-links">
         <NavLink to="/" end>

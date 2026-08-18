@@ -39,7 +39,13 @@ export default function Dashboard() {
       <h2>我的房间</h2>
       {error && <div className="alert alert-error">{error}</div>}
       {rooms.length === 0 ? (
-        <div className="empty">还没有房间，去 <Link to="/">创建</Link> 一个</div>
+        <div className="empty" style={{ padding: "80px 0" }}>
+          <div style={{ fontSize: 44, marginBottom: 12 }}>🎬</div>
+          <p style={{ margin: "0 0 18px" }}>还没有属于你的直播间</p>
+          <Link className="btn btn-primary" to="/">
+            创建第一个房间
+          </Link>
+        </div>
       ) : (
         <div className="flex-col">
           {rooms.map((r) => (

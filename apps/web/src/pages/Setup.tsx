@@ -32,12 +32,14 @@ export default function Setup({ onDone }: { onDone: () => void }) {
 
   return (
     <div className="container">
-      <div className="card" style={{ maxWidth: 420, margin: "60px auto" }}>
-        <h2>欢迎使用 StarLive</h2>
-        <p className="small muted">
-          检测到系统尚未初始化,请创建超级管理员账号。该账号拥有全部管理权限。
-        </p>
-        <form onSubmit={onSubmit}>
+      <div className="auth-wrap" style={{ maxWidth: 420 }}>
+        <div className="auth-head">
+          <span className="auth-mark">⭐</span>
+          <h2>欢迎使用 StarLive</h2>
+          <p>系统尚未初始化，请创建超级管理员账号</p>
+        </div>
+        <div className="card">
+          <form onSubmit={onSubmit}>
           {error && <div className="alert alert-error">{error}</div>}
           <div className="field">
             <label>管理员用户名</label>
@@ -73,7 +75,11 @@ export default function Setup({ onDone }: { onDone: () => void }) {
           <button className="btn btn-primary" style={{ width: "100%" }} disabled={busy}>
             {busy ? "初始化中…" : "创建管理员并完成初始化"}
           </button>
-        </form>
+          </form>
+          <p className="small muted" style={{ marginTop: 16, textAlign: "center" }}>
+            该账号拥有全部管理权限，请妥善保管密码
+          </p>
+        </div>
       </div>
     </div>
   );

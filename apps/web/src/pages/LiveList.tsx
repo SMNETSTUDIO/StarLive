@@ -44,17 +44,33 @@ export default function LiveList() {
         />
       </div>
       {rooms.length === 0 ? (
-        <div className="empty">暂无直播，去 <Link to="/">创建</Link> 一个吧</div>
+        <div className="empty" style={{ padding: "80px 0" }}>
+          <div style={{ fontSize: 44, marginBottom: 12 }}>📺</div>
+          <p style={{ margin: "0 0 18px" }}>暂时没有正在进行的直播</p>
+          <Link className="btn btn-primary" to="/">
+            去开一场直播
+          </Link>
+        </div>
       ) : (
         <div className="grid grid-3">
           {rooms.map((r) => (
-            <Link to={`/room/${r.id}`} key={r.id} className="card" style={{ color: "inherit" }}>
-              <div className="flex between">
-                <span className="badge badge-live">直播中</span>
-                <span className="badge">{r.viewerCount} 人在看</span>
+            <Link
+              to={`/room/${r.id}`}
+              key={r.id}
+              className="card card-hover"
+              style={{ color: "inherit" }}
+            >
+              <div className="live-thumb">
+                <span style={{ fontSize: 34 }}>🎥</span>
               </div>
-              <h3 style={{ marginTop: 12 }}>{r.title}</h3>
-              <p className="muted small">{r.category || "未分类"}</p>
+              <div className="flex between" style={{ marginTop: 14 }}>
+                <span className="badge badge-live">直播中</span>
+                <span className="badge">👀 {r.viewerCount}</span>
+              </div>
+              <h3 style={{ margin: "10px 0 2px", fontSize: 16 }}>{r.title}</h3>
+              <p className="muted small" style={{ margin: 0 }}>
+                {r.category || "未分类"}
+              </p>
             </Link>
           ))}
         </div>
