@@ -242,6 +242,53 @@ export class AdminService {
     return { ok: true };
   }
 
+  /** 全站录播列表（跨房间汇总，按时间倒序，最多 200 条） */
+  async listRecordings() {
+    const r = redis();
+    const roomIds = await r.smembers(Keys.roomsSet);
+    const items: {
+      id: string;
+      roomId: string;
+      roomTitle: string;
+      duration: number;
+      createdAt: number;
+      downloadUrl?: string;
+    }[] = [];
+    for (const roomId of roomIds) {
+      const recIds = await r.zrange(`room:recordings:${roomId}`, 0, -1);
+      if (recIds.length === 0) continue;
+      const title = (await r.hget(Keys.room(roomId), "title")) ?? roomId;
+      const rows = await redisPipeline<Record<string, string>>((p) => {
+        for (const id of recIds) p.hgetall(Keys.recording(id));
+      });
+      for (const rec of rows) {
+        if (!rec || !rec.id) continue;
+        items.push({
+          id: rec.id,
+          roomId,
+          roomTitle: title,
+          duration: Number(rec.duration ?? 0),
+          createdAt: Number(rec.createdAt ?? 0),
+          downloadUrl: rec.downloadUrl,
+        });
+      }
+    }
+    return items.sort((a, b) => b.createdAt - a.createdAt).slice(0, 200);
+  }
+
+  /** 删除录播记录 */
+  async deleteRecording(recordingId: string, adminId: string) {
+    const r = redis();
+    const rec = await r.hgetall(Keys.recording(recordingId));
+    if (!rec || !rec.id) throw new BizException(ErrorCode.NOT_FOUND, "录播不存在", 404);
+    await redisPipeline((p) => {
+      p.del(Keys.recording(recordingId));
+      if (rec.roomId) p.zrem(`room:recordings:${rec.roomId}`, recordingId);
+    });
+    await writeAdminAuditLog("admin_recording_delete", adminId, { recordingId, roomId: rec.roomId });
+    return { ok: true };
+  }
+
   async listWithdrawals(status: string) {
     return this.wallet.listWithdrawalsByStatus(status);
   }

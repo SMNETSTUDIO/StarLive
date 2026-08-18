@@ -27,6 +27,7 @@ const AdminUsers = lazy(() => import("./pages/admin/AdminUsers"));
 const AdminRooms = lazy(() => import("./pages/admin/AdminRooms"));
 const AdminWithdrawals = lazy(() => import("./pages/admin/AdminWithdrawals"));
 const AdminOrders = lazy(() => import("./pages/admin/AdminOrders"));
+const AdminRecordings = lazy(() => import("./pages/admin/AdminRecordings"));
 const AdminRBAC = lazy(() => import("./pages/admin/AdminRBAC"));
 const AdminAudit = lazy(() => import("./pages/admin/AdminAudit"));
 const AdminModeration = lazy(
@@ -101,6 +102,7 @@ function Shell() {
             <Route path="rooms" element={<AdminRooms />} />
             <Route path="withdrawals" element={<AdminWithdrawals />} />
             <Route path="orders" element={<AdminOrders />} />
+            <Route path="recordings" element={<AdminRecordings />} />
             <Route path="rbac" element={<AdminRBAC />} />
             <Route path="moderation" element={<AdminModeration />} />
             <Route path="audit" element={<AdminAudit />} />

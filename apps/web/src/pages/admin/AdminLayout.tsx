@@ -6,6 +6,7 @@ const LINKS = [
   { to: "/admin/rooms", label: "📺 房间管理" },
   { to: "/admin/withdrawals", label: "💸 提现管理" },
   { to: "/admin/orders", label: "🧾 订单管理" },
+  { to: "/admin/recordings", label: "🎞️ 录播管理" },
   { to: "/admin/rbac", label: "🔐 权限管理" },
   { to: "/admin/moderation", label: "🛡️ 内容治理" },
   { to: "/admin/audit", label: "📋 操作日志" },

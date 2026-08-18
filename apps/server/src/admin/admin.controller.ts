@@ -88,6 +88,16 @@ export class AdminController {
     return this.admin.adminRoomBan(body.roomId, body.banned, req.user!.sub);
   }
 
+  @Get("recordings")
+  recordings() {
+    return this.admin.listRecordings();
+  }
+
+  @Post("recording-delete")
+  recordingDelete(@Req() req: AuthedRequest, @Body() body: { recordingId: string }) {
+    return this.admin.deleteRecording(body.recordingId, req.user!.sub);
+  }
+
   @Get("withdrawals")
   withdrawals(@Query("status") status: string) {
     return this.admin.listWithdrawals(status ?? "pending");
