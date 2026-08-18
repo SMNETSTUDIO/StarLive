@@ -11,6 +11,7 @@ import {
   getUserByEmail,
   getUserById,
   getUserByUsername,
+  setUserField,
   toProfile,
 } from "../common/user-store";
 import { config } from "../config/config";
@@ -122,6 +123,57 @@ export class AuthService {
       roleId: (await this.roleId(userId)) ?? undefined,
       permissions: admin.permissions,
     };
+  }
+
+  /** 用户更新自己的资料 */
+  async updateProfile(
+    userId: string,
+    input: { name?: string; email?: string; avatarUrl?: string },
+  ) {
+    const user = await getUserById(userId);
+    if (!user) throw new BizException(ErrorCode.UNAUTHORIZED, "未登录", 401);
+    const r = redis();
+    if (input.name !== undefined) {
+      const name = input.name.trim();
+      if (!name || name.length > 20) {
+        throw new BizException(ErrorCode.INVALID_AMOUNT, "昵称需 1-20 位字符");
+      }
+      await setUserField(userId, "name", name);
+    }
+    if (input.email !== undefined) {
+      const email = input.email.trim();
+      if (email !== (user.email ?? "")) {
+        if (email) {
+          const existing = await r.get(Keys.userByEmail(email));
+          if (existing && existing !== userId) {
+            throw new BizException(ErrorCode.INVALID_AMOUNT, "邮箱已被占用");
+          }
+          await r.set(Keys.userByEmail(email), userId);
+        }
+        if (user.email) await r.del(Keys.userByEmail(user.email));
+        await setUserField(userId, "email", email);
+      }
+    }
+    if (input.avatarUrl !== undefined) {
+      await setUserField(userId, "avatarUrl", input.avatarUrl.trim());
+    }
+    return this.me(userId);
+  }
+
+  /** 用户修改自己的密码（OAuth 无密码账号可直接设置） */
+  async changePassword(userId: string, oldPassword: string, newPassword: string) {
+    const user = await getUserById(userId);
+    if (!user) throw new BizException(ErrorCode.UNAUTHORIZED, "未登录", 401);
+    if (!newPassword || newPassword.length < 6) {
+      throw new BizException(ErrorCode.INVALID_AMOUNT, "新密码至少 6 位");
+    }
+    if (user.passwordHash) {
+      const ok = await bcrypt.compare(oldPassword ?? "", user.passwordHash);
+      if (!ok) throw new BizException(ErrorCode.UNAUTHORIZED, "当前密码错误", 401);
+    }
+    const hash = await bcrypt.hash(newPassword, 10);
+    await setUserField(userId, "passwordHash", hash);
+    return { ok: true };
   }
 
   async roleId(userId: string): Promise<string | null> {

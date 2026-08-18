@@ -30,8 +30,12 @@ export default function TopBar() {
       <div className="flex">
         {user ? (
           <>
-            <span className="avatar">{user.name?.[0] ?? "U"}</span>
-            <span className="small">{user.name}</span>
+            <Link to="/profile" className="flex" style={{ gap: 8, color: "inherit" }} title="个人中心">
+              <span className="avatar">
+                {user.avatarUrl ? <img src={user.avatarUrl} alt="" /> : user.name?.[0] ?? "U"}
+              </span>
+              <span className="small">{user.name}</span>
+            </Link>
             <button className="btn btn-sm btn-ghost" onClick={onLogout}>
               退出
             </button>

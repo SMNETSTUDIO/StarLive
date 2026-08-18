@@ -7,6 +7,7 @@ import GiftEffectLayer, { type GiftFx } from "../components/GiftEffectLayer";
 import GiftPanel from "../components/GiftPanel";
 import LotteryPanel, { type LotteryInfo } from "../components/LotteryPanel";
 import Player from "../components/Player";
+import RankPanel, { type RewardRecord } from "../components/RankPanel";
 import RedpacketPanel, { type RedpacketItem } from "../components/RedpacketPanel";
 import { useAuth } from "../context/AuthContext";
 import { ApiError, get, post } from "../lib/api";
@@ -42,6 +43,8 @@ export default function Room() {
   const [lottery, setLottery] = useState<LotteryInfo | null>(null);
   const [viewers, setViewers] = useState(0);
   const [giftFx, setGiftFx] = useState<GiftFx[]>([]);
+  const [rewards, setRewards] = useState<RewardRecord[]>([]);
+  const [shared, setShared] = useState(false);
   const messagesRef = useRef<DanmakuMessage[]>([]);
 
   const isOwner = user?.id === room?.ownerId;
@@ -83,12 +86,17 @@ export default function Room() {
     get<LotteryInfo | null>(`/lottery/get?roomId=${roomId}`).then(setLottery).catch(() => undefined);
   }, [roomId]);
 
+  const loadRewards = useCallback(() => {
+    get<RewardRecord[]>(`/gift/room-rewards?roomId=${roomId}`).then(setRewards).catch(() => undefined);
+  }, [roomId]);
+
   useEffect(() => {
     const saved = sessionStorage.getItem(`room_pwd_${roomId}`) ?? undefined;
     void loadRoom(saved);
     void loadGifts();
     void loadRedpackets();
     void loadLottery();
+    void loadRewards();
 
     get<DanmakuMessage[]>(`/danmaku/recent?roomId=${roomId}`)
       .then((msgs) => {
@@ -125,6 +133,8 @@ export default function Room() {
       setTimeout(() => {
         setGiftFx((list) => list.filter((x) => x.id !== fx.id));
       }, 3900);
+      // 刷新贡献榜
+      loadRewards();
     };
     const onPresence = (p: { viewerCount: number }) => setViewers(p.viewerCount);
     const onRoomStatus = (p: { status: string }) => setRoom((r) => (r ? { ...r, status: p.status } : r));
@@ -266,6 +276,16 @@ export default function Room() {
           <span className="muted small">{viewers} 人在看</span>
         </div>
         <div className="flex">
+          <button
+            className="btn btn-sm"
+            onClick={() => {
+              void navigator.clipboard?.writeText(window.location.href);
+              setShared(true);
+              setTimeout(() => setShared(false), 1500);
+            }}
+          >
+            {shared ? "✓ 已复制链接" : "分享"}
+          </button>
           <Link className="btn btn-sm" to={`/room/${roomId}/danmaku-popout`} target="_blank">
             弹幕窗口
           </Link>
@@ -331,6 +351,7 @@ export default function Room() {
         <div className="flex-col">
           <ChatPanel messages={messages} onSend={onSendDanmaku} />
           <GiftPanel gifts={gifts} onSend={onSendGift} />
+          <RankPanel rewards={rewards} />
           <RedpacketPanel
             redpackets={redpackets}
             isLoggedIn={!!user}

@@ -10,7 +10,7 @@ import {
 } from "@nestjs/common";
 import type { Request, Response } from "express";
 import { config } from "../config/config";
-import { OptionalAuthGuard, type AuthedRequest } from "../common/guards";
+import { AuthGuard, OptionalAuthGuard, type AuthedRequest } from "../common/guards";
 import { AuthService } from "./auth.service";
 
 function setSessionCookie(res: Response, token: string): void {
@@ -77,6 +77,24 @@ export class AuthController {
   async me(@Req() req: AuthedRequest) {
     if (!req.user?.sub) return { user: null };
     return { user: await this.auth.me(req.user.sub) };
+  }
+
+  @Post("profile-update")
+  @UseGuards(AuthGuard)
+  async profileUpdate(
+    @Req() req: AuthedRequest,
+    @Body() body: { name?: string; email?: string; avatarUrl?: string },
+  ) {
+    return { user: await this.auth.updateProfile(req.user!.sub, body) };
+  }
+
+  @Post("password-change")
+  @UseGuards(AuthGuard)
+  passwordChange(
+    @Req() req: AuthedRequest,
+    @Body() body: { oldPassword?: string; newPassword: string },
+  ) {
+    return this.auth.changePassword(req.user!.sub, body.oldPassword ?? "", body.newPassword);
   }
 
   @Post("guest")

@@ -11,6 +11,7 @@ import NotFound from "./pages/NotFound";
 
 const Home = lazy(() => import("./pages/Home"));
 const Setup = lazy(() => import("./pages/Setup"));
+const Profile = lazy(() => import("./pages/Profile"));
 const Login = lazy(() => import("./pages/Login"));
 const Register = lazy(() => import("./pages/Register"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
@@ -83,6 +84,7 @@ function Shell() {
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/profile" element={<Profile />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/live-list" element={<LiveList />} />
           <Route path="/room/:roomId" element={<Room />} />

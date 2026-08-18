@@ -70,6 +70,7 @@ export class GiftService {
           id: rewardId,
           roomId: input.roomId,
           fromUserId: input.userId,
+          fromName: input.name,
           toUserId,
           giftId: input.giftId,
           giftName: giftRaw.name,
