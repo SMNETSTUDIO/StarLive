@@ -253,7 +253,7 @@ export default function Home() {
               <span className="step-num">3</span>
               <div style={{ fontWeight: 600, marginBottom: 4 }}>OBS 开始推流</div>
               <p className="muted small" style={{ margin: 0 }}>
-                服务器填 rtmp://你的域名:1935，即刻开播
+                在 OBS 设置中填写直播流服务器，即刻开播
               </p>
             </div>
           </div>

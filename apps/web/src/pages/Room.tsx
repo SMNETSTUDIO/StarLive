@@ -59,6 +59,8 @@ export default function Room() {
   const messagesRef = useRef<DanmakuMessage[]>([]);
 
   const isOwner = user?.id === room?.ownerId;
+  // 按当前访问域名生成推流地址（MediaMTX RTMP 端口 1935）
+  const rtmpUrl = `rtmp://${window.location.hostname}:1935`;
 
   const appendMessage = useCallback((m: DanmakuMessage) => {
     messagesRef.current = [...messagesRef.current.slice(-200), m];
@@ -441,7 +443,7 @@ export default function Room() {
                 <p className="muted">主播暂未开播</p>
                 {isOwner && room.streamKey && (
                   <div className="card small" style={{ textAlign: "left" }}>
-                    <p>推流地址：<code>rtmp://服务器:1935</code></p>
+                    <p>推流地址：<code>{rtmpUrl}</code></p>
                     <p>推流密钥：<code>{room.streamKey}</code></p>
                   </div>
                 )}
@@ -464,7 +466,7 @@ export default function Room() {
                 </button>
               </div>
               <p style={{ margin: "4px 0" }}>
-                服务器：<code>rtmp://&lt;host&gt;:1935</code>
+                服务器：<code>{rtmpUrl}</code>
               </p>
               <p style={{ margin: "4px 0" }}>
                 串流密钥：<code>{room.streamKey}</code>
