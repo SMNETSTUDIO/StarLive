@@ -46,6 +46,11 @@ export class AdminController {
     return this.admin.adminUserPassword(body.userId, body.password, req.user!.sub);
   }
 
+  @Get("user-transactions")
+  userTransactions(@Query("userId") userId: string, @Query("limit") limit?: string) {
+    return this.admin.userTransactions(userId, Number(limit ?? 20));
+  }
+
   @Post("balance-adjust")
   balanceAdjust(
     @Req() req: AuthedRequest,

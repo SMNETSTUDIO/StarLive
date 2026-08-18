@@ -14,6 +14,25 @@ interface AdminUser {
   createdAt: number;
 }
 
+interface Tx {
+  id: string;
+  type: string;
+  amount: number;
+  balanceAfter: number;
+  meta?: string;
+  ts: number;
+}
+
+const TX_LABELS: Record<string, string> = {
+  recharge: "充值",
+  gift_send: "送礼",
+  gift_receive: "收礼",
+  redpacket_send: "发红包",
+  redpacket_receive: "抢红包",
+  withdrawal: "提现",
+  admin_adjust: "管理员调整",
+};
+
 function EditUserModal({ user, onClose, onSaved }: { user: AdminUser; onClose: () => void; onSaved: () => void }) {
   const [name, setName] = useState(user.name);
   const [email, setEmail] = useState(user.email ?? "");
@@ -23,6 +42,24 @@ function EditUserModal({ user, onClose, onSaved }: { user: AdminUser; onClose: (
   const [reason, setReason] = useState("");
   const [msg, setMsg] = useState("");
   const [error, setError] = useState("");
+  const [roles, setRoles] = useState<string[] | null>(null);
+  const [roleId, setRoleId] = useState("");
+  const [txs, setTxs] = useState<Tx[] | null>(null);
+
+  useEffect(() => {
+    // 角色列表（仅超管可见，403 时隐藏该区块）
+    Promise.all([
+      get<{ roleId: string }[]>("/admin/roles"),
+      get<Record<string, string>>("/admin/user-roles"),
+    ])
+      .then(([rs, userRoles]) => {
+        const ids = rs.map((r) => r.roleId);
+        if (!ids.includes("super_admin")) ids.unshift("super_admin");
+        setRoles(ids);
+        setRoleId(userRoles[user.id] ?? "");
+      })
+      .catch(() => setRoles(null));
+  }, [user.id]);
 
   const run = async (fn: () => Promise<unknown>, okMsg: string) => {
     setError("");
@@ -131,6 +168,72 @@ function EditUserModal({ user, onClose, onSaved }: { user: AdminUser; onClose: (
         <p className="small muted" style={{ margin: "8px 0 0" }}>
           正数增加、负数扣减，操作会写入用户交易流水与审计日志
         </p>
+      </div>
+
+      {roles && (
+        <div className="modal-section">
+          <h4>🔐 管理角色</h4>
+          <div className="flex">
+            <select className="select" value={roleId} onChange={(e) => setRoleId(e.target.value)}>
+              <option value="">无（普通用户）</option>
+              {roles.map((r) => (
+                <option key={r} value={r}>
+                  {r === "super_admin" ? "超级管理员" : r}
+                </option>
+              ))}
+            </select>
+            <button
+              className="btn btn-sm"
+              onClick={() =>
+                run(
+                  () => post("/admin/user-role-set", { userId: user.id, roleId: roleId || null }),
+                  "角色已更新（用户重新登录后生效）",
+                )
+              }
+            >
+              保存
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div className="modal-section">
+        <h4>🧾 最近流水</h4>
+        {txs === null ? (
+          <button
+            className="btn btn-sm"
+            onClick={() =>
+              get<Tx[]>(`/admin/user-transactions?userId=${user.id}&limit=15`)
+                .then(setTxs)
+                .catch((e) => setError((e as Error).message))
+            }
+          >
+            加载最近 15 条流水
+          </button>
+        ) : txs.length === 0 ? (
+          <div className="muted small">暂无交易记录</div>
+        ) : (
+          <div className="flex-col" style={{ gap: 0 }}>
+            {txs.map((t) => (
+              <div className="list-row" key={t.id}>
+                <span className="badge">{TX_LABELS[t.type] ?? t.type}</span>
+                <span
+                  className="grow"
+                  style={{
+                    color: Number(t.amount) >= 0 ? "var(--green)" : "var(--red)",
+                    fontWeight: 600,
+                  }}
+                >
+                  {Number(t.amount) >= 0 ? `+${t.amount}` : t.amount} SC
+                </span>
+                <span className="muted small">余 {t.balanceAfter}</span>
+                <span className="muted small">
+                  {new Date(Number(t.ts)).toLocaleString("zh-CN", { hour12: false })}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </Modal>
   );

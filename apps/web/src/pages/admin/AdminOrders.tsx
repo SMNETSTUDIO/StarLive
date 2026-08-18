@@ -11,16 +11,57 @@ interface Order {
   createdAt: number;
 }
 
+const STATUS_TABS = [
+  { label: "全部", value: "" },
+  { label: "✅ 已支付", value: "paid" },
+  { label: "⏳ 待支付", value: "pending" },
+];
+
 export default function AdminOrders() {
   const [orders, setOrders] = useState<Order[]>([]);
+  const [status, setStatus] = useState("");
+  const [keyword, setKeyword] = useState("");
 
   useEffect(() => {
     get<Order[]>("/admin/orders").then(setOrders).catch(() => undefined);
   }, []);
 
+  const kw = keyword.trim().toLowerCase();
+  const shown = orders
+    .filter((o) => !status || o.status === status)
+    .filter((o) => !kw || o.id.toLowerCase().includes(kw) || o.userId.toLowerCase().includes(kw))
+    .sort((a, b) => b.createdAt - a.createdAt);
+
+  const paidTotal = shown.filter((o) => o.status === "paid").reduce((s, o) => s + o.amount, 0);
+
   return (
     <div>
-      <h2>订单管理</h2>
+      <div className="flex between wrap" style={{ marginBottom: 14 }}>
+        <h2 style={{ margin: 0 }}>订单管理</h2>
+        <input
+          className="input"
+          style={{ width: 220 }}
+          placeholder="🔍 搜索订单号 / 用户 ID…"
+          value={keyword}
+          onChange={(e) => setKeyword(e.target.value)}
+        />
+      </div>
+      <div className="flex between wrap" style={{ marginBottom: 16 }}>
+        <div className="chips">
+          {STATUS_TABS.map((s) => (
+            <button
+              key={s.value}
+              className={`chip${status === s.value ? " active" : ""}`}
+              onClick={() => setStatus(s.value)}
+            >
+              {s.label}
+            </button>
+          ))}
+        </div>
+        <span className="muted small">
+          {shown.length} 笔 · 已支付合计 ¥{paidTotal.toFixed(2)}
+        </span>
+      </div>
       <table className="table">
         <thead>
           <tr>
@@ -34,17 +75,30 @@ export default function AdminOrders() {
           </tr>
         </thead>
         <tbody>
-          {orders.map((o) => (
-            <tr key={o.id}>
-              <td>{o.id}</td>
-              <td>{o.userId}</td>
-              <td>{o.amount}</td>
-              <td>{o.coins}</td>
-              <td>{o.provider}</td>
-              <td>
-                <span className={`badge ${o.status === "paid" ? "badge-ok" : "badge-warn"}`}>{o.status}</span>
+          {shown.length === 0 && (
+            <tr>
+              <td className="table-empty" colSpan={7}>
+                暂无订单
               </td>
-              <td>{new Date(o.createdAt).toLocaleString()}</td>
+            </tr>
+          )}
+          {shown.map((o) => (
+            <tr key={o.id}>
+              <td className="muted small">{o.id}</td>
+              <td className="muted small">{o.userId}</td>
+              <td>¥{o.amount}</td>
+              <td>⭐ {o.coins}</td>
+              <td>
+                <span className="badge">{o.provider}</span>
+              </td>
+              <td>
+                <span className={`badge ${o.status === "paid" ? "badge-ok" : "badge-warn"}`}>
+                  {o.status === "paid" ? "已支付" : "待支付"}
+                </span>
+              </td>
+              <td className="muted small">
+                {new Date(o.createdAt).toLocaleString("zh-CN", { hour12: false })}
+              </td>
             </tr>
           ))}
         </tbody>

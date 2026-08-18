@@ -108,6 +108,13 @@ export class AdminService {
     return { ok: true };
   }
 
+  /** 查看用户交易流水 */
+  async userTransactions(userId: string, limit = 20) {
+    const user = await getUserById(userId);
+    if (!user) throw new BizException(ErrorCode.NOT_FOUND, "用户不存在", 404);
+    return this.wallet.transactions(userId, limit);
+  }
+
   /** 管理员调整用户星币余额（正数增加 / 负数扣减） */
   async adminBalanceAdjust(userId: string, delta: number, reason: string, adminId: string) {
     if (!Number.isFinite(delta) || !Number.isInteger(delta) || delta === 0) {
