@@ -33,13 +33,38 @@ export class AdminController {
     return this.admin.setUserFlag(body.userId, body.field, body.value, req.user!.sub);
   }
 
+  @Post("user-update")
+  userUpdate(
+    @Req() req: AuthedRequest,
+    @Body() body: { userId: string; name?: string; email?: string; avatarUrl?: string },
+  ) {
+    return this.admin.adminUserUpdate(body.userId, body, req.user!.sub);
+  }
+
+  @Post("user-password")
+  userPassword(@Req() req: AuthedRequest, @Body() body: { userId: string; password: string }) {
+    return this.admin.adminUserPassword(body.userId, body.password, req.user!.sub);
+  }
+
+  @Post("balance-adjust")
+  balanceAdjust(
+    @Req() req: AuthedRequest,
+    @Body() body: { userId: string; delta: number; reason?: string },
+  ) {
+    return this.admin.adminBalanceAdjust(body.userId, Number(body.delta), body.reason ?? "", req.user!.sub);
+  }
+
   @Get("rooms")
   rooms() {
     return this.admin.listRooms();
   }
 
   @Post("room-update")
-  roomUpdate(@Req() req: AuthedRequest, @Body() body: { roomId: string; title?: string; isPublic?: boolean }) {
+  roomUpdate(
+    @Req() req: AuthedRequest,
+    @Body()
+    body: { roomId: string; title?: string; isPublic?: boolean; category?: string; announcement?: string },
+  ) {
     return this.admin.adminRoomUpdate(body.roomId, body, req.user!.sub);
   }
 

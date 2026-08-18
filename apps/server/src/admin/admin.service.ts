@@ -1,10 +1,13 @@
 import { Injectable } from "@nestjs/common";
+import * as bcrypt from "bcryptjs";
 import { ErrorCode, Keys } from "@starlive/shared";
 import { writeAdminAuditLog } from "../common/audit";
+import { BizException } from "../common/errors";
 import { DEFAULT_ADMIN_PERMISSIONS } from "../common/permissions";
 import { redis, redisPipeline } from "../common/redis";
 import { getRoom } from "../common/room-store";
 import { getUserById, setUserField } from "../common/user-store";
+import { addTransaction, applyBalanceDelta, getBalance } from "../common/wallet-store";
 import { ModerationService } from "../moderation/moderation.service";
 import { SystemService } from "../system/system.service";
 import { WalletService } from "../wallet/wallet.service";
@@ -34,9 +37,13 @@ export class AdminService {
     const rows = await redisPipeline<Record<string, string>>((p) => {
       for (const id of ids) p.hgetall(Keys.user(id));
     });
+    const coins = await redisPipeline<string | null>((p) => {
+      for (const id of ids) p.hget(Keys.userBalance(id), "coins");
+    });
     return rows
-      .filter((u) => u && u.id)
-      .map((u) => ({
+      .map((u, i) => ({ u, coins: Number(coins[i] ?? 0) }))
+      .filter(({ u }) => u && u.id)
+      .map(({ u, coins: c }) => ({
         id: u.id,
         name: u.name ?? u.username,
         username: u.username,
@@ -44,6 +51,7 @@ export class AdminService {
         avatarUrl: u.avatarUrl,
         banned: u.banned === "true",
         muted: u.muted === "true",
+        coins: c,
         createdAt: Number(u.createdAt ?? 0),
       }));
   }
@@ -54,10 +62,74 @@ export class AdminService {
     return { ok: true };
   }
 
+  /** 编辑用户资料（昵称 / 邮箱 / 头像） */
+  async adminUserUpdate(
+    userId: string,
+    input: { name?: string; email?: string; avatarUrl?: string },
+    adminId: string,
+  ) {
+    const user = await getUserById(userId);
+    if (!user) throw new BizException(ErrorCode.NOT_FOUND, "用户不存在", 404);
+    const r = redis();
+    if (input.name !== undefined && input.name.trim()) {
+      await setUserField(userId, "name", input.name.trim());
+    }
+    if (input.email !== undefined) {
+      const email = input.email.trim();
+      if (email !== (user.email ?? "")) {
+        if (email) {
+          const existing = await r.get(Keys.userByEmail(email));
+          if (existing && existing !== userId) {
+            throw new BizException(ErrorCode.INVALID_AMOUNT, "邮箱已被其他用户占用");
+          }
+          await r.set(Keys.userByEmail(email), userId);
+        }
+        if (user.email) await r.del(Keys.userByEmail(user.email));
+        await setUserField(userId, "email", email);
+      }
+    }
+    if (input.avatarUrl !== undefined) {
+      await setUserField(userId, "avatarUrl", input.avatarUrl.trim());
+    }
+    await writeAdminAuditLog("admin_user_update", adminId, { userId });
+    return { ok: true };
+  }
+
+  /** 管理员重置用户密码 */
+  async adminUserPassword(userId: string, password: string, adminId: string) {
+    if (!password || password.length < 6) {
+      throw new BizException(ErrorCode.INVALID_AMOUNT, "密码至少 6 位");
+    }
+    const user = await getUserById(userId);
+    if (!user) throw new BizException(ErrorCode.NOT_FOUND, "用户不存在", 404);
+    const hash = await bcrypt.hash(password, 10);
+    await setUserField(userId, "passwordHash", hash);
+    await writeAdminAuditLog("admin_user_password_reset", adminId, { userId });
+    return { ok: true };
+  }
+
+  /** 管理员调整用户星币余额（正数增加 / 负数扣减） */
+  async adminBalanceAdjust(userId: string, delta: number, reason: string, adminId: string) {
+    if (!Number.isFinite(delta) || !Number.isInteger(delta) || delta === 0) {
+      throw new BizException(ErrorCode.INVALID_AMOUNT, "调整数额需为非零整数");
+    }
+    const user = await getUserById(userId);
+    if (!user) throw new BizException(ErrorCode.NOT_FOUND, "用户不存在", 404);
+    const before = await getBalance(userId);
+    const after = before.coins + delta;
+    if (after < 0) {
+      throw new BizException(ErrorCode.INVALID_AMOUNT, `余额不足（当前 ${before.coins} SC）`);
+    }
+    await applyBalanceDelta(userId, { coins: delta });
+    await addTransaction(userId, "admin_adjust", delta, after, reason || "管理员调整");
+    await writeAdminAuditLog("admin_balance_adjust", adminId, { userId, delta, reason });
+    return { coins: after };
+  }
+
   async listRooms() {
     const ids = await redis().smembers(Keys.roomsSet);
     const rows = await redisPipeline<string[]>((p) => {
-      for (const id of ids) p.hmget(Keys.room(id), "id", "title", "ownerId", "isPublic", "category", "status", "banned", "createdAt");
+      for (const id of ids) p.hmget(Keys.room(id), "id", "title", "ownerId", "isPublic", "category", "status", "banned", "createdAt", "announcement");
     });
     return rows
       .filter((r) => r[0])
@@ -70,18 +142,36 @@ export class AdminService {
         status: r[5],
         banned: r[6] === "true",
         createdAt: Number(r[7] ?? 0),
+        announcement: r[8] ?? "",
       }));
   }
 
-  async adminRoomUpdate(roomId: string, input: { title?: string; isPublic?: boolean }, adminId: string) {
+  async adminRoomUpdate(
+    roomId: string,
+    input: { title?: string; isPublic?: boolean; category?: string; announcement?: string },
+    adminId: string,
+  ) {
     const room = await getRoom(roomId);
-    if (!room) throw new Error("room_not_found");
+    if (!room) throw new BizException(ErrorCode.NOT_FOUND, "房间不存在", 404);
     const r = redis();
-    if (input.title !== undefined) await r.hset(Keys.room(roomId), "title", input.title);
+    if (input.title !== undefined && input.title.trim()) {
+      await r.hset(Keys.room(roomId), "title", input.title.trim());
+    }
     if (input.isPublic !== undefined) {
       await r.hset(Keys.room(roomId), "isPublic", input.isPublic ? "true" : "false");
       if (input.isPublic) await r.sadd(Keys.publicRoomsSet, roomId);
       else await r.srem(Keys.publicRoomsSet, roomId);
+    }
+    if (input.category !== undefined) {
+      const category = input.category.trim();
+      if (category !== (room.category ?? "")) {
+        if (room.category) await r.srem(Keys.categoryRooms(room.category), roomId);
+        if (category) await r.sadd(Keys.categoryRooms(category), roomId);
+        await r.hset(Keys.room(roomId), "category", category);
+      }
+    }
+    if (input.announcement !== undefined) {
+      await r.hset(Keys.room(roomId), "announcement", input.announcement);
     }
     await writeAdminAuditLog("admin_room_update", adminId, { roomId });
     return { ok: true };

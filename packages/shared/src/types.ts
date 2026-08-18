@@ -49,7 +49,8 @@ export type TransactionType =
   | "gift_receive"
   | "redpacket_send"
   | "redpacket_receive"
-  | "withdrawal";
+  | "withdrawal"
+  | "admin_adjust";
 
 export interface Transaction {
   id: string;

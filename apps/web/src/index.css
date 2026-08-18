@@ -758,6 +758,84 @@ code {
     0 14px 40px rgba(48, 209, 88, 0.3);
 }
 
+/* 弹窗 */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  animation: page-in 0.25s var(--ease) both;
+}
+
+.modal {
+  width: 100%;
+  background: var(--glass-thick);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 20px;
+  padding: 22px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    0 30px 80px rgba(0, 0, 0, 0.6);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  animation: modal-in 0.35s var(--spring) both;
+  max-height: 86vh;
+  overflow-y: auto;
+}
+
+@keyframes modal-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.modal-close {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 12px;
+  transition: background 0.2s var(--ease), color 0.2s var(--ease);
+}
+
+.modal-close:hover {
+  background: rgba(255, 255, 255, 0.16);
+  color: var(--text);
+}
+
+.modal-section {
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  margin-top: 18px;
+  padding-top: 16px;
+}
+
+.modal-section > h4 {
+  margin: 0 0 10px;
+  font-size: 13px;
+  color: var(--text-dim);
+  font-weight: 500;
+}
+
 /* 礼物特效层 */
 .gift-fx-layer {
   position: absolute;
