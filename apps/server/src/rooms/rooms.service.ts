@@ -127,8 +127,9 @@ export class RoomsService {
     const r = redis();
     let ids: string[];
 
-    if (opts.mine && opts.userId) {
-      ids = await r.smembers(Keys.userRooms(opts.userId));
+    if (opts.mine) {
+      // mine 必须有登录身份；未登录返回空，不回退到公开列表
+      ids = opts.userId ? await r.smembers(Keys.userRooms(opts.userId)) : [];
     } else if (opts.category) {
       ids = await r.smembers(Keys.categoryRooms(opts.category));
     } else {

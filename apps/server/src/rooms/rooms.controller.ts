@@ -45,13 +45,15 @@ export class RoomsController {
   }
 
   @Get("list")
+  @UseGuards(OptionalAuthGuard)
   list(
+    @Req() req: AuthedRequest,
     @Query("mine") mine?: string,
     @Query("category") category?: string,
-    @Query("userId") userId?: string,
   ) {
+    // mine 只信任 JWT 身份，不接受查询参数指定 userId（防枚举他人房间）
     return this.rooms.list({
-      userId,
+      userId: req.user?.sub,
       mine: mine === "true",
       publicOnly: mine !== "true",
       category,
