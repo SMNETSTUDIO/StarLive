@@ -64,7 +64,7 @@ docker compose up -d
 docker compose --profile recording up -d
 ```
 
-也可直接使用 GHCR 预构建镜像（main 分支自动发布）：
+也可直接使用 GHCR 预构建镜像：
 
 ```bash
 docker run -d -p 3000:3000 \
