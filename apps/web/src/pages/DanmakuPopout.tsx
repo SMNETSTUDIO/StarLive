@@ -36,7 +36,7 @@ export default function DanmakuPopout() {
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100vh", background: "#0b0f19", padding: 12 }}>
+    <div style={{ display: "flex", flexDirection: "column", height: "100vh", background: "var(--bg)", padding: 12 }}>
       <div style={{ flex: 1, overflowY: "auto", fontSize: 18 }}>
         {messages.map((m) => (
           <div key={m.id} style={{ marginBottom: 6 }}>
@@ -46,13 +46,14 @@ export default function DanmakuPopout() {
       </div>
       <div style={{ display: "flex", gap: 8 }}>
         <input
-          style={{ flex: 1, padding: 10, borderRadius: 8, border: "1px solid #243049", background: "rgba(0,0,0,0.3)", color: "#e6e9f0" }}
+          className="input"
+          style={{ flex: 1 }}
           value={text}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && send()}
           maxLength={30}
         />
-        <button style={{ padding: "10px 18px", borderRadius: 8, border: "none", background: "#5ea2ff", color: "#fff", cursor: "pointer" }} onClick={send}>
+        <button className="btn btn-primary" onClick={send}>
           发送
         </button>
       </div>

@@ -1,3 +1,6 @@
+/** 外部 API 地址；留空时使用同源相对路径（由 Vite 代理转发） */
+export const API_BASE = (import.meta.env.VITE_API_BASE ?? "").replace(/\/+$/, "");
+
 export class ApiError extends Error {
   code: number;
   constructor(code: number, message: string) {
@@ -16,7 +19,7 @@ export async function api<T = unknown>(
   path: string,
   options: RequestInit = {},
 ): Promise<T> {
-  const res = await fetch(`/api${path}`, {
+  const res = await fetch(`${API_BASE}/api${path}`, {
     credentials: "include",
     headers: {
       "Content-Type": "application/json",
