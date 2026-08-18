@@ -1,5 +1,8 @@
 # StarLive 星播平台
 
+[![CI](https://github.com/SMNETSTUDIO/StarLive/actions/workflows/ci.yml/badge.svg)](https://github.com/SMNETSTUDIO/StarLive/actions/workflows/ci.yml)
+[![Docker](https://github.com/SMNETSTUDIO/StarLive/actions/workflows/docker.yml/badge.svg)](https://github.com/SMNETSTUDIO/StarLive/actions/workflows/docker.yml)
+
 可自部署的直播互动平台，带 **星币（StarCoin）虚拟货币经济系统**：观众可充值、送礼物、发弹幕、抢红包、参与抽奖；主播可通过礼物收益提现。
 
 > 项目为 LDLive 旧版（Netlify Serverless）的重构升级版，从「无状态函数 + HTTP 轮询」迁移为「独立 NestJS 后端 + Socket.IO 实时长连接」。
@@ -59,6 +62,15 @@ docker compose up -d
 
 # 开启录播 Worker（FFmpeg）
 docker compose --profile recording up -d
+```
+
+也可直接使用 GHCR 预构建镜像（main 分支自动发布）：
+
+```bash
+docker run -d -p 3000:3000 \
+  -e REDIS_URL=rediss://default:TOKEN@xxx.upstash.io:6379 \
+  -e JWT_SECRET=$(openssl rand -hex 32) \
+  ghcr.io/smnetstudio/starlive:main
 ```
 
 前后端一体化，对外只暴露 **3000 端口**（网页 + `/api` + `/socket.io` + `/hls` 同源）；Redis 数据持久化在卷 `redis-data`，录播落盘在卷 `recordings-data`。首次访问 `http://<host>:3000` 会进入初始化向导创建管理员。
