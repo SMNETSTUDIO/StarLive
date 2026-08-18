@@ -11,6 +11,13 @@ interface Withdrawal {
   createdAt: number;
 }
 
+const STATUS_TABS = [
+  { label: "⏳ 待处理", value: "pending" },
+  { label: "🔄 处理中", value: "processing" },
+  { label: "✅ 已完成", value: "completed" },
+  { label: "❌ 已拒绝", value: "rejected" },
+];
+
 export default function AdminWithdrawals() {
   const [status, setStatus] = useState("pending");
   const [items, setItems] = useState<Withdrawal[]>([]);
@@ -30,14 +37,14 @@ export default function AdminWithdrawals() {
   return (
     <div>
       <h2>提现管理</h2>
-      <div className="flex" style={{ marginBottom: 16 }}>
-        {["pending", "processing", "completed", "rejected"].map((s) => (
+      <div className="chips" style={{ marginBottom: 16 }}>
+        {STATUS_TABS.map((s) => (
           <button
-            key={s}
-            className={`btn btn-sm ${status === s ? "btn-primary" : ""}`}
-            onClick={() => setStatus(s)}
+            key={s.value}
+            className={`chip${status === s.value ? " active" : ""}`}
+            onClick={() => setStatus(s.value)}
           >
-            {s}
+            {s.label}
           </button>
         ))}
       </div>
@@ -54,6 +61,13 @@ export default function AdminWithdrawals() {
           </tr>
         </thead>
         <tbody>
+          {items.length === 0 && (
+            <tr>
+              <td className="table-empty" colSpan={7}>
+                该状态下暂无提现申请
+              </td>
+            </tr>
+          )}
           {items.map((w) => (
             <tr key={w.id}>
               <td>{w.id}</td>

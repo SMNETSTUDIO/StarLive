@@ -1117,17 +1117,25 @@ code {
   color: var(--yellow);
 }
 
-/* 表格 */
+/* 表格 —— 玻璃卡片化 */
 .table {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   font-size: 14px;
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  box-shadow: var(--glass-shadow);
 }
 
 .table th,
 .table td {
   text-align: left;
-  padding: 11px 12px;
+  padding: 12px 16px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
@@ -1137,14 +1145,26 @@ code {
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
+  background: rgba(255, 255, 255, 0.04);
 }
 
 .table tr:last-child td {
   border-bottom: none;
 }
 
-.table tr:hover td {
-  background: rgba(255, 255, 255, 0.03);
+.table tbody tr {
+  transition: background 0.15s var(--ease);
+}
+
+.table tbody tr:hover td {
+  background: rgba(255, 255, 255, 0.035);
+}
+
+/* 表格空态占位 */
+.table td.table-empty {
+  text-align: center;
+  color: var(--text-dim);
+  padding: 40px 16px;
 }
 
 /* 顶栏 — 悬浮液态玻璃 */
