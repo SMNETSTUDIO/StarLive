@@ -57,14 +57,16 @@ export default function Recharge() {
           <label>充值金额（星币）</label>
           <div className="grid" style={{ gridTemplateColumns: "repeat(5, 1fr)", gap: 8 }}>
             {PACKAGES.map((p) => (
-              <div
+              <button
                 key={p}
+                type="button"
                 className={`gift-tile${coins === p ? " selected" : ""}`}
+                aria-pressed={coins === p}
                 onClick={() => setCoins(p)}
               >
                 <div style={{ fontWeight: 600 }}>{p}</div>
                 <div className="small muted">SC</div>
-              </div>
+              </button>
             ))}
           </div>
           <input

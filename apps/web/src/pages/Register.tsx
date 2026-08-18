@@ -40,6 +40,9 @@ export default function Register() {
             <label>用户名（2-20 位）</label>
             <input
               className="input"
+              name="username"
+              autoComplete="username"
+              spellCheck={false}
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               required
@@ -50,6 +53,9 @@ export default function Register() {
             <input
               className="input"
               type="email"
+              name="email"
+              autoComplete="email"
+              spellCheck={false}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
@@ -59,6 +65,8 @@ export default function Register() {
             <input
               className="input"
               type="password"
+              name="new-password"
+              autoComplete="new-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required

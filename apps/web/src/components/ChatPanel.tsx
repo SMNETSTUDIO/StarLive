@@ -65,6 +65,8 @@ export default function ChatPanel({
           className={`btn btn-sm btn-ghost${showEmoji ? " emoji-active" : ""}`}
           style={{ padding: "6px 10px", fontSize: 17 }}
           title="表情"
+          aria-label="表情面板"
+          aria-expanded={showEmoji}
           onClick={() => setShowEmoji((v) => !v)}
         >
           😀

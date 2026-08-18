@@ -39,6 +39,9 @@ export default function Login() {
             <label>用户名 / 邮箱</label>
             <input
               className="input"
+              name="username"
+              autoComplete="username"
+              spellCheck={false}
               value={account}
               onChange={(e) => setAccount(e.target.value)}
               required
@@ -49,6 +52,8 @@ export default function Login() {
             <input
               className="input"
               type="password"
+              name="password"
+              autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required

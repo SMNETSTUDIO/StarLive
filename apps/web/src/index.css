@@ -48,6 +48,18 @@
   box-sizing: border-box;
 }
 
+button,
+a,
+input,
+select,
+textarea {
+  touch-action: manipulation;
+}
+
+html {
+  -webkit-tap-highlight-color: transparent;
+}
+
 html,
 body {
   height: 100%;
@@ -332,6 +344,7 @@ h1 {
   line-height: 1.08;
   font-weight: 700;
   letter-spacing: -0.03em;
+  text-wrap: balance;
   margin: 0 0 16px;
   background: linear-gradient(180deg, #ffffff 30%, rgba(255, 255, 255, 0.55));
   -webkit-background-clip: text;
@@ -640,7 +653,7 @@ code {
   word-break: break-all;
 }
 
-/* 礼物贴纸 */
+/* 礼物贴纸（button 元素） */
 .gift-tile {
   padding: 12px 8px;
   text-align: center;
@@ -648,6 +661,9 @@ code {
   border-radius: var(--radius-sm);
   border: 1px solid var(--glass-border);
   background: rgba(255, 255, 255, 0.04);
+  color: inherit;
+  font: inherit;
+  width: 100%;
   transition: background 0.2s var(--ease), border-color 0.2s var(--ease),
     transform 0.2s var(--spring), box-shadow 0.2s var(--ease);
 }
@@ -872,6 +888,7 @@ code {
   animation: modal-in 0.35s var(--spring) both;
   max-height: 86vh;
   overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 @keyframes modal-in {
@@ -1199,6 +1216,7 @@ code {
   font-weight: 700;
   letter-spacing: -0.03em;
   line-height: 1.25;
+  font-variant-numeric: tabular-nums;
 }
 
 .balance-unit {
@@ -1662,6 +1680,7 @@ code {
   font-size: 32px;
   font-weight: 700;
   letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
   background: linear-gradient(180deg, #ffffff 40%, rgba(255, 255, 255, 0.6));
   -webkit-background-clip: text;
   background-clip: text;

@@ -25,15 +25,17 @@ export default function GiftPanel({
       <h3>🎁 礼物</h3>
       <div className="grid grid-3" style={{ marginBottom: 12, gap: 10 }}>
         {gifts.map((g) => (
-          <div
+          <button
             key={g.id}
+            type="button"
             className={`gift-tile${selected === g.id ? " selected" : ""}`}
+            aria-pressed={selected === g.id}
             onClick={() => setSelected(g.id)}
           >
             <div className="gift-emoji">{g.icon ?? GIFT_EMOJI[g.id] ?? "🎁"}</div>
             <div className="small">{g.name}</div>
             <div className="small muted">{g.price} SC</div>
-          </div>
+          </button>
         ))}
       </div>
       <div className="flex between">
