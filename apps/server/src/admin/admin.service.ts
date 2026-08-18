@@ -9,6 +9,7 @@ import { getRoom } from "../common/room-store";
 import { getUserById, setUserField } from "../common/user-store";
 import { addTransaction, applyBalanceDelta, getBalance } from "../common/wallet-store";
 import { ModerationService } from "../moderation/moderation.service";
+import { PaymentService } from "../payment/payment.service";
 import { SystemService } from "../system/system.service";
 import { WalletService } from "../wallet/wallet.service";
 
@@ -18,6 +19,7 @@ export class AdminService {
     private readonly wallet: WalletService,
     private readonly moderation: ModerationService,
     private readonly system: SystemService,
+    private readonly payment: PaymentService,
   ) {}
 
   async stats() {
@@ -411,9 +413,9 @@ export class AdminService {
 
   /** 支付网关可后台配置的字段（白名单）与其中的敏感项 */
   private static readonly PAYMENT_FIELDS: Record<string, string[]> = {
-    epay: ["pid", "key", "gateway"],
-    alipay: ["appId", "privateKey", "alipayPublicKey", "gateway"],
-    stripe: ["secretKey", "webhookSecret", "currency"],
+    epay: ["pid", "key", "gateway", "enabled"],
+    alipay: ["appId", "privateKey", "alipayPublicKey", "gateway", "enabled"],
+    stripe: ["secretKey", "webhookSecret", "currency", "enabled"],
   };
   private static readonly PAYMENT_SECRET_FIELDS = new Set([
     "key",
@@ -425,6 +427,11 @@ export class AdminService {
   private static maskSecret(v: string): string {
     if (v.length <= 8) return "••••••••";
     return `${v.slice(0, 4)}••••${v.slice(-4)}`;
+  }
+
+  /** 各网关配置/启用状态总览（可同时启用多个） */
+  async paymentGateways() {
+    return this.payment.gatewayStatus();
   }
 
   async getPaymentConfig(provider: string) {

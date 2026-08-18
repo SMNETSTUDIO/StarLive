@@ -36,10 +36,20 @@ export default function AdminSettings() {
   const [msg, setMsg] = useState("");
   const [payProvider, setPayProvider] = useState<string>("epay");
   const [payConfig, setPayConfig] = useState<Record<string, string>>({});
+  const [gateways, setGateways] = useState<
+    { provider: string; configured: boolean; enabled: boolean }[]
+  >([]);
+
+  const loadGateways = () => {
+    get<{ provider: string; configured: boolean; enabled: boolean }[]>("/admin/payment-gateways")
+      .then(setGateways)
+      .catch(() => undefined);
+  };
 
   const load = () => {
     get<Features>("/admin/features").then(setFeatures).catch(() => undefined);
     get<Record<string, string>>("/admin/config").then(setConfig).catch(() => undefined);
+    loadGateways();
   };
 
   useEffect(() => {
@@ -59,6 +69,7 @@ export default function AdminSettings() {
         config: payConfig,
       });
       setPayConfig(r.config);
+      loadGateways();
       setMsg("支付网关配置已保存");
     } catch (e) {
       setMsg((e as Error).message);
@@ -139,8 +150,23 @@ export default function AdminSettings() {
         <div className="card" style={{ gridColumn: "1 / -1" }}>
           <h3>支付网关</h3>
           <p className="muted small" style={{ margin: "0 0 12px" }}>
-            配置保存在数据库并即时生效，优先于环境变量；密钥回显为掩码，留空提交表示清除（回退环境变量）。
+            各网关相互独立，可同时启用任意多个；配置保存在数据库并即时生效，优先于环境变量；
+            密钥回显为掩码，留空提交表示清除（回退环境变量）。
           </p>
+          {gateways.length > 0 && (
+            <div className="flex wrap" style={{ gap: 6, marginBottom: 14 }}>
+              {gateways.map((g) => (
+                <span
+                  key={g.provider}
+                  className={`badge ${g.configured && g.enabled ? "badge-ok" : g.configured ? "badge-warn" : ""}`}
+                >
+                  {PAY_PROVIDERS.find((p) => p.value === g.provider)?.label ??
+                    (g.provider === "mock" ? "沙箱" : g.provider)}{" "}
+                  {g.configured && g.enabled ? "启用中" : g.configured ? "已停用" : "未配置"}
+                </span>
+              ))}
+            </div>
+          )}
           <div className="field" style={{ maxWidth: 260 }}>
             <label>网关</label>
             <select
@@ -168,6 +194,17 @@ export default function AdminSettings() {
               </div>
             ))}
           </div>
+          <label className="switch" style={{ margin: "4px 0 16px" }}>
+            <input
+              type="checkbox"
+              checked={payConfig.enabled !== "false"}
+              onChange={(e) =>
+                setPayConfig({ ...payConfig, enabled: e.target.checked ? "true" : "false" })
+              }
+            />
+            <span className="track" />
+            启用该网关（停用后不在充值页展示，已有订单的回调/查单不受影响）
+          </label>
           <button className="btn btn-primary" onClick={savePayConfig}>
             保存网关配置
           </button>

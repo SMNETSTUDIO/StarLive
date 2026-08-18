@@ -188,6 +188,12 @@ export class AdminController {
     return this.admin.updateFeatures(body, req.user!.sub);
   }
 
+  @Get("payment-gateways")
+  @UseGuards(SuperAdminGuard)
+  paymentGateways() {
+    return this.admin.paymentGateways();
+  }
+
   @Get("payment-config")
   @UseGuards(SuperAdminGuard)
   paymentConfig(@Query("provider") provider: string) {

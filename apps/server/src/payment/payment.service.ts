@@ -564,20 +564,42 @@ export class PaymentService {
     return p;
   }
 
-  /** 仅返回已配置可用的网关（未配置的不出现在充值页下拉） */
+  /** 网关启用状态（enabled 字段，缺省启用）；只影响列表与新订单，不影响已有订单的回调/查单 */
+  private async gatewayEnabled(name: string): Promise<boolean> {
+    const v = await redis().hget(Keys.paymentConfig(name), "enabled");
+    return v !== "false";
+  }
+
+  /** 仅返回已配置且启用的网关（可同时启用任意多个） */
   async listProviders(): Promise<string[]> {
     const out: string[] = [];
     for (const p of this.providers.values()) {
-      const ok = p.isConfigured ? await p.isConfigured() : true;
-      if (ok) out.push(p.name);
+      const configured = p.isConfigured ? await p.isConfigured() : true;
+      if (configured && (await this.gatewayEnabled(p.name))) out.push(p.name);
     }
     return out;
   }
 
-  createOrder(
+  /** 后台总览：各网关的配置/启用状态 */
+  async gatewayStatus(): Promise<{ provider: string; configured: boolean; enabled: boolean }[]> {
+    const out: { provider: string; configured: boolean; enabled: boolean }[] = [];
+    for (const p of this.providers.values()) {
+      out.push({
+        provider: p.name,
+        configured: p.isConfigured ? await p.isConfigured() : true,
+        enabled: await this.gatewayEnabled(p.name),
+      });
+    }
+    return out;
+  }
+
+  async createOrder(
     providerName: string,
     order: { orderId: string; amount: number; coins: number; subject: string },
   ) {
+    if (!(await this.gatewayEnabled(providerName))) {
+      throw new BizException(5000, "该支付方式已停用");
+    }
     return this.get(providerName).createOrder(order);
   }
 
