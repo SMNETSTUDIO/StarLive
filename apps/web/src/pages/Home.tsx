@@ -81,6 +81,7 @@ export default function Home() {
           </div>
         </div>
       ) : (
+        <div className="flex-col" style={{ gap: 16 }}>
         <div className="grid grid-2">
           <div className="card">
             <h2>创建直播间</h2>
@@ -173,6 +174,45 @@ export default function Home() {
               </Link>
             </div>
           </div>
+        </div>
+
+        <div className="card">
+          <h3 style={{ fontSize: 16, marginBottom: 16 }}>🎬 开播三步走</h3>
+          <div className="grid grid-3">
+            <div className="step-card">
+              <span className="step-num">1</span>
+              <div style={{ fontWeight: 600, marginBottom: 4 }}>创建直播间</div>
+              <p className="muted small" style={{ margin: 0 }}>
+                填写标题和分类，可设密码开私密房
+              </p>
+            </div>
+            <div className="step-card">
+              <span className="step-num">2</span>
+              <div style={{ fontWeight: 600, marginBottom: 4 }}>复制推流密钥</div>
+              <p className="muted small" style={{ margin: 0 }}>
+                进入房间页，一键复制 OBS 串流密钥
+              </p>
+            </div>
+            <div className="step-card">
+              <span className="step-num">3</span>
+              <div style={{ fontWeight: 600, marginBottom: 4 }}>OBS 开始推流</div>
+              <p className="muted small" style={{ margin: 0 }}>
+                服务器填 rtmp://你的域名:1935，即刻开播
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <Link to="/live-list" className="card card-hover flex between" style={{ color: "inherit" }}>
+          <div className="flex" style={{ gap: 14 }}>
+            <span className="feature-icon" style={{ marginBottom: 0 }}>🔥</span>
+            <div>
+              <div style={{ fontWeight: 600 }}>直播广场</div>
+              <span className="muted small">看看现在谁在直播，发弹幕抢红包</span>
+            </div>
+          </div>
+          <span className="muted" style={{ fontSize: 20 }}>›</span>
+        </Link>
         </div>
       )}
     </div>

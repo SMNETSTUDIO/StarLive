@@ -12,6 +12,15 @@ interface RoomItem {
   createdAt: number;
 }
 
+const CATEGORIES = [
+  { label: "全部", value: "" },
+  { label: "🎮 游戏", value: "游戏" },
+  { label: "🎵 音乐", value: "音乐" },
+  { label: "💬 闲聊", value: "闲聊" },
+  { label: "🏕️ 户外", value: "户外" },
+  { label: "📚 学习", value: "学习" },
+];
+
 export default function LiveList() {
   const [rooms, setRooms] = useState<RoomItem[]>([]);
   const [category, setCategory] = useState("");
@@ -33,15 +42,19 @@ export default function LiveList() {
 
   return (
     <div className="container">
-      <div className="flex between">
-        <h2>直播广场</h2>
-        <input
-          className="input"
-          style={{ width: 200 }}
-          placeholder="分类筛选…"
-          value={category}
-          onChange={(e) => setCategory(e.target.value)}
-        />
+      <div className="flex between wrap" style={{ marginBottom: 18 }}>
+        <h2 style={{ margin: 0 }}>直播广场</h2>
+        <div className="chips">
+          {CATEGORIES.map((c) => (
+            <button
+              key={c.value}
+              className={`chip${category === c.value ? " active" : ""}`}
+              onClick={() => setCategory(c.value)}
+            >
+              {c.label}
+            </button>
+          ))}
+        </div>
       </div>
       {rooms.length === 0 ? (
         <div className="empty" style={{ padding: "80px 0" }}>

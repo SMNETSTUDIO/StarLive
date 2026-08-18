@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useState } from "react";
 import { Route, Routes } from "react-router-dom";
 import AnnouncementModal from "./components/AnnouncementModal";
+import Footer from "./components/Footer";
 import TopBar from "./components/TopBar";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { get } from "./lib/api";
@@ -105,6 +106,7 @@ function Shell() {
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Suspense>
+      <Footer />
     </>
   );
 }
