@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import Modal from "../../components/Modal";
 import { get, post } from "../../lib/api";
+import { downloadCsv } from "../../lib/csv";
 
 interface AdminUser {
   id: string;
@@ -268,13 +269,37 @@ export default function AdminUsers() {
     <div>
       <div className="flex between" style={{ marginBottom: 14 }}>
         <h2 style={{ margin: 0 }}>用户管理</h2>
-        <input
-          className="input"
-          style={{ width: 220 }}
-          placeholder="🔍 搜索用户名 / 邮箱…"
-          value={keyword}
-          onChange={(e) => setKeyword(e.target.value)}
-        />
+        <div className="flex">
+          <input
+            className="input"
+            style={{ width: 220 }}
+            placeholder="🔍 搜索用户名 / 邮箱…"
+            value={keyword}
+            onChange={(e) => setKeyword(e.target.value)}
+          />
+          <button
+            className="btn btn-sm"
+            disabled={shown.length === 0}
+            onClick={() =>
+              downloadCsv(
+                `users_${new Date().toISOString().slice(0, 10)}.csv`,
+                ["ID", "昵称", "用户名", "邮箱", "余额(SC)", "封禁", "禁言", "注册时间"],
+                shown.map((u) => [
+                  u.id,
+                  u.name,
+                  u.username,
+                  u.email,
+                  u.coins,
+                  u.banned ? "是" : "否",
+                  u.muted ? "是" : "否",
+                  new Date(u.createdAt).toLocaleString("zh-CN", { hour12: false }),
+                ]),
+              )
+            }
+          >
+            ⬇︎ 导出 CSV
+          </button>
+        </div>
       </div>
       <table className="table">
         <thead>

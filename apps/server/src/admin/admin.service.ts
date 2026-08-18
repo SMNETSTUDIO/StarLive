@@ -215,6 +215,13 @@ export class AdminService {
     return result;
   }
 
+  /** 手动补单（支付回调丢失时人工入账） */
+  async completeOrder(orderId: string, adminId: string) {
+    const result = await this.wallet.adminCompleteOrder(orderId);
+    await writeAdminAuditLog("admin_order_complete", adminId, { orderId, coins: result.coins });
+    return result;
+  }
+
   async listOrders() {
     const ids = await redis().zrevrange(Keys.paymentOrdersByStatus("paid"), 0, 99);
     const pending = await redis().zrevrange(Keys.paymentOrdersByStatus("pending"), 0, 99);

@@ -101,6 +101,11 @@ export class AdminController {
     return this.admin.listOrders();
   }
 
+  @Post("order-complete")
+  orderComplete(@Req() req: AuthedRequest, @Body() body: { orderId: string }) {
+    return this.admin.completeOrder(body.orderId, req.user!.sub);
+  }
+
   @Get("roles")
   @UseGuards(SuperAdminGuard)
   roles() {

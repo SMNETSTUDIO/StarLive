@@ -111,6 +111,37 @@ export class WalletService {
     }
   }
 
+  /** 管理员手动补单：跳过网关验签，直接将 pending 订单入账（回调丢失时使用） */
+  async adminCompleteOrder(orderId: string) {
+    const release = await acquireLock(`payment:${orderId}`, 15000);
+    if (!release) throw new BizException(ErrorCode.INTERNAL, "系统繁忙");
+    try {
+      const order = await redis().hgetall(Keys.paymentOrder(orderId));
+      if (!order || !order.id) throw new BizException(ErrorCode.NOT_FOUND, "订单不存在", 404);
+      if (order.status === "paid") {
+        throw new BizException(ErrorCode.ORDER_ALREADY_PAID, "订单已是已支付状态");
+      }
+
+      const coins = Number(order.coins);
+      await applyBalanceDelta(order.userId, { coins, totalRecharged: coins });
+      const b = await getBalance(order.userId);
+      await addTransaction(order.userId, "recharge", coins, b.coins, orderId);
+
+      await redisPipeline((p) => {
+        p.hset(Keys.paymentOrder(orderId), {
+          status: "paid",
+          paidAt: String(Date.now()),
+          tradeNo: "admin_manual",
+        });
+        p.zrem(Keys.paymentOrdersByStatus("pending"), orderId);
+        p.zadd(Keys.paymentOrdersByStatus("paid"), Date.now(), orderId);
+      });
+      return { ok: true, coins };
+    } finally {
+      await release();
+    }
+  }
+
   async requestWithdrawal(userId: string, amount: number) {
     const cfg = await this.system.getConfig();
     const min = Number(cfg.min_withdrawal ?? 10);

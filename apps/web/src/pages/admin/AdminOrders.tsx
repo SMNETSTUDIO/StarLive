@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { get } from "../../lib/api";
+import { get, post } from "../../lib/api";
+import { downloadCsv } from "../../lib/csv";
 
 interface Order {
   id: string;
@@ -21,10 +22,23 @@ export default function AdminOrders() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [status, setStatus] = useState("");
   const [keyword, setKeyword] = useState("");
+  const [error, setError] = useState("");
 
+  const load = () => get<Order[]>("/admin/orders").then(setOrders).catch(() => undefined);
   useEffect(() => {
-    get<Order[]>("/admin/orders").then(setOrders).catch(() => undefined);
+    void load();
   }, []);
+
+  const complete = async (orderId: string) => {
+    if (!confirm(`确认手动补单 ${orderId}？将直接为用户入账星币（用于支付回调丢失的情况）`)) return;
+    setError("");
+    try {
+      await post("/admin/order-complete", { orderId });
+      load();
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  };
 
   const kw = keyword.trim().toLowerCase();
   const shown = orders
@@ -58,10 +72,34 @@ export default function AdminOrders() {
             </button>
           ))}
         </div>
-        <span className="muted small">
-          {shown.length} 笔 · 已支付合计 ¥{paidTotal.toFixed(2)}
-        </span>
+        <div className="flex">
+          <span className="muted small">
+            {shown.length} 笔 · 已支付合计 ¥{paidTotal.toFixed(2)}
+          </span>
+          <button
+            className="btn btn-sm"
+            disabled={shown.length === 0}
+            onClick={() =>
+              downloadCsv(
+                `orders_${new Date().toISOString().slice(0, 10)}.csv`,
+                ["订单号", "用户ID", "金额(元)", "星币", "网关", "状态", "创建时间"],
+                shown.map((o) => [
+                  o.id,
+                  o.userId,
+                  o.amount,
+                  o.coins,
+                  o.provider,
+                  o.status === "paid" ? "已支付" : "待支付",
+                  new Date(o.createdAt).toLocaleString("zh-CN", { hour12: false }),
+                ]),
+              )
+            }
+          >
+            ⬇︎ 导出 CSV
+          </button>
+        </div>
       </div>
+      {error && <div className="alert alert-error">{error}</div>}
       <table className="table">
         <thead>
           <tr>
@@ -72,12 +110,13 @@ export default function AdminOrders() {
             <th>网关</th>
             <th>状态</th>
             <th>时间</th>
+            <th>操作</th>
           </tr>
         </thead>
         <tbody>
           {shown.length === 0 && (
             <tr>
-              <td className="table-empty" colSpan={7}>
+              <td className="table-empty" colSpan={8}>
                 暂无订单
               </td>
             </tr>
@@ -98,6 +137,13 @@ export default function AdminOrders() {
               </td>
               <td className="muted small">
                 {new Date(o.createdAt).toLocaleString("zh-CN", { hour12: false })}
+              </td>
+              <td>
+                {o.status === "pending" && (
+                  <button className="btn btn-sm" onClick={() => complete(o.id)}>
+                    补单
+                  </button>
+                )}
               </td>
             </tr>
           ))}
