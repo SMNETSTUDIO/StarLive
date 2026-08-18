@@ -1,0 +1,20 @@
+# MediaMTX 配置（StarLive）
+# 详细文档：https://github.com/bluenviron/mediamtx/blob/main/mediamtx.yml
+
+logLevel: info
+
+api: no
+
+rtmp: yes
+rtmpAddress: :1935
+
+hls: yes
+hlsAddress: :8888
+hlsAllowOrigin: "*"
+
+webrtc: yes
+webrtcAddress: :8889
+
+# 动态路径由后端通过外部鉴权钩子控制（P1 接入）
+# paths:
+#   all_others:

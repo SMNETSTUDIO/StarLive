@@ -1,0 +1,80 @@
+# StarLive 星播平台 一键部署
+# 基本启动：docker compose up -d
+# 开启录播 Worker：docker compose --profile recording up -d
+
+services:
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis-data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  mediamtx:
+    image: bluenviron/mediamtx:1.11.3
+    volumes:
+      - ./mediamtx.yml:/mediamtx.yml
+    ports:
+      - "1935:1935" # RTMP 推流
+      - "8888:8888" # HLS / HTTP
+      - "8889:8889" # WebRTC
+      - "9997:9997" # 控制 API
+    restart: unless-stopped
+
+  server:
+    build:
+      context: ..
+      dockerfile: apps/server/Dockerfile
+    env_file:
+      - ../.env
+    environment:
+      REDIS_URL: redis://redis:6379
+      MEDIAMTX_API: http://mediamtx:9997
+      RECORDING_DIR: /data/recordings
+    depends_on:
+      redis:
+        condition: service_healthy
+      mediamtx:
+        condition: service_started
+    ports:
+      - "4000:4000"
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ..
+      dockerfile: apps/web/Dockerfile
+    depends_on:
+      - server
+    ports:
+      - "80:80"
+    restart: unless-stopped
+
+  worker:
+    profiles: ["recording"]
+    build:
+      context: ..
+      dockerfile: apps/worker/Dockerfile
+    env_file:
+      - ../.env
+    environment:
+      REDIS_URL: redis://redis:6379
+      RECORDING_DIR: /data/recordings
+    depends_on:
+      redis:
+        condition: service_healthy
+      mediamtx:
+        condition: service_started
+    volumes:
+      - recordings-data:/data/recordings
+    restart: unless-stopped
+
+volumes:
+  redis-data:
+  recordings-data:
