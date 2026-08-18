@@ -30,4 +30,10 @@ export class GiftController {
   roomRewards(@Query("roomId") roomId: string) {
     return this.gift.roomRewards(roomId);
   }
+
+  @Get("earnings")
+  @UseGuards(AuthGuard)
+  earnings(@Req() req: AuthedRequest, @Query("days") days?: string) {
+    return this.gift.ownerEarnings(req.user!.sub, days ? Number(days) : 14);
+  }
 }

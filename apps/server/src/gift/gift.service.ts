@@ -113,4 +113,101 @@ export class GiftService {
     });
     return rows.filter((r) => r && r.id);
   }
+
+  /** 主播收益统计：聚合名下所有房间近 N 天的打赏记录（趋势/分房间/贡献榜/最近明细） */
+  async ownerEarnings(userId: string, days = 14) {
+    const windowDays = Math.min(Math.max(Math.floor(days) || 14, 1), 30);
+    const r = redis();
+    const roomIds = await r.smembers(Keys.userRooms(userId));
+    const since = Date.now() - windowDays * 86400_000;
+
+    // 各房间窗口内的打赏记录（每房间上限 1000 条，防极端数据量）
+    const records: Record<string, string>[] = [];
+    for (const roomId of roomIds) {
+      const ids = await r.zrevrangebyscore(Keys.roomRewards(roomId), "+inf", since, "LIMIT", 0, 1000);
+      if (ids.length === 0) continue;
+      const rows = await redisPipeline<Record<string, string>>((p) => {
+        for (const id of ids) p.hgetall(Keys.rewardRecord(id));
+      });
+      records.push(...rows.filter((x) => x && x.id));
+    }
+
+    // 按天趋势（对齐管理后台的桶格式）
+    const buckets: { date: string; key: string; coins: number; count: number }[] = [];
+    const now = new Date();
+    for (let i = windowDays - 1; i >= 0; i--) {
+      const d = new Date(now);
+      d.setDate(d.getDate() - i);
+      buckets.push({ date: `${d.getMonth() + 1}/${d.getDate()}`, key: d.toDateString(), coins: 0, count: 0 });
+    }
+    const bucketByKey = new Map(buckets.map((b) => [b.key, b]));
+
+    const byRoom = new Map<string, { roomId: string; coins: number; count: number }>();
+    const byGifter = new Map<string, { userId: string; name: string; coins: number; count: number }>();
+    let totalCoins = 0;
+    let totalCount = 0;
+
+    for (const rec of records) {
+      const coins = Number(rec.total) || 0;
+      const count = Number(rec.count) || 0;
+      const ts = Number(rec.ts) || 0;
+      totalCoins += coins;
+      totalCount += count;
+
+      const bucket = bucketByKey.get(new Date(ts).toDateString());
+      if (bucket) {
+        bucket.coins += coins;
+        bucket.count += count;
+      }
+
+      const room = byRoom.get(rec.roomId) ?? { roomId: rec.roomId, coins: 0, count: 0 };
+      room.coins += coins;
+      room.count += count;
+      byRoom.set(rec.roomId, room);
+
+      const gifterKey = rec.fromUserId || rec.fromName;
+      const gifter = byGifter.get(gifterKey) ?? {
+        userId: rec.fromUserId,
+        name: rec.fromName || "用户",
+        coins: 0,
+        count: 0,
+      };
+      gifter.coins += coins;
+      gifter.count += count;
+      byGifter.set(gifterKey, gifter);
+    }
+
+    // 房间标题（含窗口内无收益的房间，便于前端逐房间展示）
+    const roomsOut: { roomId: string; title: string; coins: number; count: number }[] = [];
+    for (const roomId of roomIds) {
+      const room = await getRoom(roomId);
+      const agg = byRoom.get(roomId);
+      roomsOut.push({ roomId, title: room?.title ?? roomId, coins: agg?.coins ?? 0, count: agg?.count ?? 0 });
+    }
+    roomsOut.sort((a, b) => b.coins - a.coins);
+
+    const recent = records
+      .sort((a, b) => Number(b.ts) - Number(a.ts))
+      .slice(0, 20)
+      .map((rec) => ({
+        id: rec.id,
+        roomId: rec.roomId,
+        fromName: rec.fromName,
+        giftId: rec.giftId,
+        giftName: rec.giftName,
+        count: Number(rec.count) || 0,
+        total: Number(rec.total) || 0,
+        ts: Number(rec.ts) || 0,
+      }));
+
+    return {
+      days: windowDays,
+      totalCoins,
+      totalCount,
+      trend: buckets.map(({ date, coins, count }) => ({ date, coins, count })),
+      rooms: roomsOut,
+      topGifters: [...byGifter.values()].sort((a, b) => b.coins - a.coins).slice(0, 10),
+      recent,
+    };
+  }
 }
