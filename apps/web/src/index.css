@@ -76,11 +76,6 @@ body {
       800px 500px at 90% 0%,
       rgba(94, 92, 230, 0.06) 0%,
       transparent 55%
-    ),
-    radial-gradient(
-      1000px 700px at 50% 110%,
-      rgba(94, 92, 230, 0.04) 0%,
-      transparent 60%
     );
   background-attachment: fixed;
   color: var(--text);
@@ -91,6 +86,58 @@ body {
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+}
+
+/* ── 星空场（品牌签名：星播的夜空）──────────────────
+   两层固定星点交替闪烁，纯 CSS 零依赖；
+   星点极暗且稀疏，是氛围不是装饰 */
+body::before,
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
+body::before {
+  background-image:
+    radial-gradient(1px 1px at 8% 22%, rgba(255, 255, 255, 0.55), transparent 100%),
+    radial-gradient(1px 1px at 21% 68%, rgba(255, 255, 255, 0.35), transparent 100%),
+    radial-gradient(1.5px 1.5px at 33% 12%, rgba(190, 215, 255, 0.5), transparent 100%),
+    radial-gradient(1px 1px at 46% 45%, rgba(255, 255, 255, 0.3), transparent 100%),
+    radial-gradient(1px 1px at 62% 78%, rgba(255, 255, 255, 0.4), transparent 100%),
+    radial-gradient(1.5px 1.5px at 74% 30%, rgba(210, 200, 255, 0.45), transparent 100%),
+    radial-gradient(1px 1px at 88% 60%, rgba(255, 255, 255, 0.35), transparent 100%),
+    radial-gradient(1px 1px at 95% 14%, rgba(255, 255, 255, 0.5), transparent 100%);
+  animation: twinkle 7s ease-in-out infinite alternate;
+}
+
+body::after {
+  background-image:
+    radial-gradient(1px 1px at 14% 40%, rgba(255, 255, 255, 0.3), transparent 100%),
+    radial-gradient(1px 1px at 28% 88%, rgba(255, 255, 255, 0.4), transparent 100%),
+    radial-gradient(1.5px 1.5px at 41% 25%, rgba(255, 240, 200, 0.4), transparent 100%),
+    radial-gradient(1px 1px at 55% 62%, rgba(255, 255, 255, 0.3), transparent 100%),
+    radial-gradient(1px 1px at 69% 8%, rgba(255, 255, 255, 0.45), transparent 100%),
+    radial-gradient(1px 1px at 81% 84%, rgba(200, 220, 255, 0.35), transparent 100%),
+    radial-gradient(1.5px 1.5px at 93% 38%, rgba(255, 255, 255, 0.4), transparent 100%);
+  animation: twinkle 9s ease-in-out 2s infinite alternate-reverse;
+}
+
+@keyframes twinkle {
+  from {
+    opacity: 0.35;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* 内容置于星空之上 */
+#root {
+  position: relative;
+  z-index: 1;
 }
 
 a {

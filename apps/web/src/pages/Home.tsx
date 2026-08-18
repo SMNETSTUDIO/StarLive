@@ -47,14 +47,14 @@ export default function Home() {
       {!user ? (
         <div className="flex-col" style={{ gap: 24 }}>
           <div className="hero">
-            <span className="hero-eyebrow">✦ 可自部署的直播互动平台</span>
+            <span className="hero-eyebrow">✦ StarLive · 开源自部署直播平台</span>
             <h1 className="hero-title">
-              直播互动，
+              自己的直播间，
               <br />
-              <span className="grad">一站式体验。</span>
+              <span className="grad">自己说了算。</span>
             </h1>
             <p className="hero-sub">
-              高清直播、实时弹幕、礼物打赏、红包抽奖 —— 属于你自己的星币经济。
+              推流、弹幕、礼物、红包、提现——整套星币经济，都跑在你自己的服务器上。
             </p>
             <div className="flex" style={{ justifyContent: "center" }}>
               <Link className="btn btn-primary btn-lg" to="/register">
