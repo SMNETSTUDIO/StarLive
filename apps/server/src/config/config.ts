@@ -46,6 +46,10 @@ export const config = {
   epayKey: env("EPAY_KEY", ""),
   epayGateway: env("EPAY_GATEWAY", ""),
 
+  // mock 支付网关：可无条件入账，仅限沙箱联调；生产环境需显式开启
+  paymentMockEnabled:
+    env("PAYMENT_MOCK_ENABLED", "") === "true" || env("NODE_ENV", "development") !== "production",
+
   adminUserIds: env("ADMIN_USER_IDS", "")
     .split(",")
     .map((s) => s.trim())

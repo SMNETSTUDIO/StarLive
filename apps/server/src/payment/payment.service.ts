@@ -107,6 +107,9 @@ class EpayProvider implements PaymentProvider {
     if (!receivedSign || receivedSign !== expected) {
       throw new BizException(5001, "易支付验签失败");
     }
+    if (params.trade_status && params.trade_status !== "TRADE_SUCCESS") {
+      throw new BizException(5001, `易支付交易未成功：${params.trade_status}`);
+    }
     return {
       orderId: params.out_trade_no ?? "",
       amount: Number(params.money ?? 0),
@@ -133,7 +136,10 @@ export class PaymentService {
   private readonly providers = new Map<string, PaymentProvider>();
 
   constructor() {
-    this.register(new MockProvider());
+    // mock 网关可无条件入账，生产环境默认不注册（PAYMENT_MOCK_ENABLED=true 可强制开启）
+    if (config.paymentMockEnabled) {
+      this.register(new MockProvider());
+    }
     this.register(new EpayProvider());
   }
 
@@ -142,7 +148,10 @@ export class PaymentService {
   }
 
   get(name: string): PaymentProvider {
-    return this.providers.get(name) ?? this.providers.get("mock")!;
+    // 未知网关必须报错，绝不能回退到 mock（否则伪造回调可免费入账）
+    const p = this.providers.get(name);
+    if (!p) throw new BizException(5000, `未知支付网关：${name}`);
+    return p;
   }
 
   listProviders(): string[] {
