@@ -62,7 +62,12 @@ export default function Recordings() {
 
   return (
     <div className="container">
-      <h2>录播管理</h2>
+      <div className="page-head">
+        <div>
+          <h2 className="page-title">录播管理</h2>
+          <p className="page-sub">直播回放的下载与分享链接管理</p>
+        </div>
+      </div>
       {error && <div className="alert alert-error">{error}</div>}
       <div className="card">
         <h3>🎞️ 录播列表</h3>

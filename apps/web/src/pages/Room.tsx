@@ -359,7 +359,7 @@ export default function Room() {
   }
 
   return (
-    <div className="container" style={{ maxWidth: 1280 }}>
+    <div className="container container-wide">
       <div className="flex between" style={{ marginBottom: 12 }}>
         <div>
           <h2 style={{ margin: 0 }}>
@@ -425,7 +425,7 @@ export default function Room() {
         </div>
       )}
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 360px", gap: 16 }}>
+      <div className="room-grid">
         <div>
           {room.playbackUrl ? (
             <div style={{ position: "relative" }}>

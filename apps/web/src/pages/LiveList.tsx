@@ -42,9 +42,12 @@ export default function LiveList() {
 
   return (
     <div className="container">
-      <div className="flex between wrap" style={{ marginBottom: 18 }}>
-        <h2 style={{ margin: 0 }}>直播广场</h2>
-        <div className="chips">
+      <div className="page-head">
+        <div>
+          <h2 className="page-title">直播广场</h2>
+          <p className="page-sub">正在进行的直播，列表自动刷新</p>
+        </div>
+        <div className="page-actions chips">
           {CATEGORIES.map((c) => (
             <button
               key={c.value}

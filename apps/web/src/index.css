@@ -42,6 +42,11 @@
   --radius-sm: 12px;
   --ease: cubic-bezier(0.25, 0.1, 0.25, 1);
   --spring: cubic-bezier(0.32, 0.72, 0, 1);
+
+  /* 内容轴线：正文 / 顶栏 / 页脚共用同一宽度，边缘光学对齐 */
+  --content-w: 1120px;
+  --content-w-wide: 1280px;
+  --content-x: 24px;
 }
 
 * {
@@ -172,6 +177,14 @@ h1 {
   font-size: 28px;
 }
 
+h2 {
+  font-size: 22px;
+}
+
+h3 {
+  font-size: 17px;
+}
+
 ::selection {
   background: rgba(10, 132, 255, 0.35);
 }
@@ -223,12 +236,50 @@ h1 {
   }
 }
 
-/* 布局 */
+/* 布局
+   注意：#root 是 flex 列容器，块级子元素带 auto 外边距时不会被 stretch，
+   会收缩为内容宽度 —— 必须显式 width: 100% */
 .container {
-  max-width: 1100px;
+  width: 100%;
+  max-width: var(--content-w);
   margin: 0 auto;
-  padding: 28px 20px;
+  padding: 40px var(--content-x) 64px;
   animation: page-in 0.5s var(--spring) both;
+}
+
+.container-wide {
+  max-width: var(--content-w-wide);
+}
+
+/* 页头 —— 大标题模式（对齐 iOS Large Title 的层级感） */
+.page-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 28px;
+}
+
+.page-head .page-title {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 1.15;
+}
+
+.page-head .page-sub {
+  margin: 6px 0 0;
+  font-size: 13px;
+  color: var(--text-dim);
+}
+
+.page-head .page-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
 }
 
 /* 液态玻璃卡片 */
@@ -695,9 +746,9 @@ code {
 }
 
 .footer-inner {
-  max-width: 1100px;
+  max-width: var(--content-w);
   margin: 0 auto;
-  padding: 28px 20px;
+  padding: 28px var(--content-x);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1349,20 +1400,26 @@ code {
   padding: 40px 16px;
 }
 
-/* 顶栏 — 悬浮液态玻璃 */
+/* 顶栏 — 悬浮液态玻璃（玻璃全宽，内容对齐正文轴线） */
 .topbar {
   position: sticky;
   top: 0;
   z-index: 20;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 24px;
   background: rgba(8, 8, 10, 0.6);
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
   border-bottom: 1px solid rgba(255, 255, 255, 0.07);
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
+}
+
+.topbar-inner {
+  max-width: var(--content-w);
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px var(--content-x);
 }
 
 .logo {
@@ -1517,6 +1574,14 @@ code {
   to {
     transform: translateX(-120%);
   }
+}
+
+/* 直播间主栅格：播放器 + 互动侧栏 */
+.room-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 380px;
+  gap: 20px;
+  align-items: start;
 }
 
 /* 播放器容器 */
@@ -1693,6 +1758,12 @@ code {
   padding: 48px 0;
 }
 
+@media (max-width: 1024px) {
+  .room-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (max-width: 960px) {
   .grid-4 {
     grid-template-columns: repeat(2, 1fr);
@@ -1705,13 +1776,19 @@ code {
   .grid-4 {
     grid-template-columns: 1fr;
   }
+  .container {
+    padding: 24px 16px 48px;
+  }
+  .page-head .page-title {
+    font-size: 24px;
+  }
   .hero-title {
     font-size: 38px;
   }
   .hero {
     padding: 44px 12px 36px;
   }
-  .topbar {
+  .topbar-inner {
     padding: 10px 12px;
     gap: 8px;
     flex-wrap: wrap;

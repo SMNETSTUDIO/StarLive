@@ -62,7 +62,17 @@ export default function Dashboard() {
 
   return (
     <div className="container">
-      <h2>主播中心</h2>
+      <div className="page-head">
+        <div>
+          <h2 className="page-title">主播中心</h2>
+          <p className="page-sub">房间管理与近 14 天礼物收益</p>
+        </div>
+        <div className="page-actions">
+          <Link className="btn btn-sm" to="/">
+            创建房间
+          </Link>
+        </div>
+      </div>
       {error && <div className="alert alert-error">{error}</div>}
 
       {earnings && rooms.length > 0 && (
