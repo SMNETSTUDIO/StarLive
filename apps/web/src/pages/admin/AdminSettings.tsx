@@ -56,8 +56,8 @@ export default function AdminSettings() {
               [
                 ["maintenanceEnabled", "维护模式"],
                 ["registrationEnabled", "开放注册"],
-                ["recordingEnabled", "录播（默认关闭）"],
-                ["transcodingEnabled", "转码（默认关闭）"],
+                ["recordingEnabled", "录播"],
+                ["transcodingEnabled", "转码"],
                 ["lotteryEnabled", "抽奖"],
                 ["publicListEnabled", "直播广场"],
               ] as const
