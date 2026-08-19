@@ -1911,13 +1911,17 @@ code {
   min-height: 0;
 }
 
-/* 播放器下方互动面板双列网格 */
+/* 播放器下方互动面板双列网格：同行卡片等高 */
 .room-widgets {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
   margin-top: 16px;
-  align-items: start;
+}
+
+.room-widgets > .card {
+  height: 100%;
+  margin: 0;
 }
 
 /* 聊天气泡 */
