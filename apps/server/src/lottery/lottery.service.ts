@@ -98,14 +98,31 @@ export class LotteryService {
       const winnerCount = Math.min(Number(raw.winnerCount), participants.length);
       const winners = shuffle(participants).slice(0, winnerCount);
 
+      // 中奖者解析为用户名，弹窗/面板直接可读
+      const { getUserById } = await import("../common/user-store");
+      const winnerNames = (
+        await Promise.all(winners.map((id) => getUserById(id)))
+      ).map((u, i) => u?.name ?? u?.username ?? winners[i]);
+
       await redisPipeline((p) => {
-        p.hset(Keys.lottery(lotteryId), { drawn: "true", winners: JSON.stringify(winners) });
+        p.hset(Keys.lottery(lotteryId), {
+          drawn: "true",
+          winners: JSON.stringify(winners),
+          winnerNames: JSON.stringify(winnerNames),
+        });
         p.del(Keys.roomActiveLottery(raw.roomId));
         p.lpush(Keys.roomLotteries(raw.roomId), lotteryId);
       });
 
-      publishEvent(EVT.LOTTERY_DRAWN, { id: lotteryId, roomId: raw.roomId, winners, ts: Date.now() });
-      return { winners };
+      publishEvent(EVT.LOTTERY_DRAWN, {
+        id: lotteryId,
+        roomId: raw.roomId,
+        winners,
+        winnerNames,
+        participants: participants.length,
+        ts: Date.now(),
+      });
+      return { winners, winnerNames };
     } finally {
       await release();
     }

@@ -250,7 +250,9 @@ h3 {
   max-width: var(--content-w);
   margin: 0 auto;
   padding: 40px var(--content-x) 64px;
-  animation: page-in 0.5s var(--spring) both;
+  /* 不用 fill 模式：filling 的 transform 动画会让元素永久成为 fixed 定位的
+     包含块，导致弹窗相对内容而非视口居中 */
+  animation: page-in 0.5s var(--spring);
 }
 
 .container-wide {
@@ -429,7 +431,9 @@ h3 {
 .auth-wrap {
   max-width: 400px;
   margin: 56px auto 0;
-  animation: page-in 0.5s var(--spring) both;
+  /* 不用 fill 模式：filling 的 transform 动画会让元素永久成为 fixed 定位的
+     包含块，导致弹窗相对内容而非视口居中 */
+  animation: page-in 0.5s var(--spring);
 }
 
 .auth-head {
@@ -1230,7 +1234,9 @@ code {
   justify-content: center;
   text-align: center;
   padding: 80px 20px;
-  animation: page-in 0.5s var(--spring) both;
+  /* 不用 fill 模式：filling 的 transform 动画会让元素永久成为 fixed 定位的
+     包含块，导致弹窗相对内容而非视口居中 */
+  animation: page-in 0.5s var(--spring);
 }
 
 .status-page .status-icon {
@@ -1909,6 +1915,291 @@ code {
 .room-side > .card {
   flex: 1;
   min-height: 0;
+}
+
+/* ===== 直播间事件层：红包/抽奖挂件与弹窗 ===== */
+.live-pendants {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 5;
+}
+
+.pendant {
+  position: relative;
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  border: 0;
+  cursor: pointer;
+  font-size: 26px;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(8px);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18), 0 6px 20px rgba(0, 0, 0, 0.4);
+  transition: transform 0.15s ease;
+}
+
+.pendant:hover {
+  transform: scale(1.08);
+}
+
+.pendant-rp {
+  animation: pendant-shake 2.4s ease infinite;
+}
+
+@keyframes pendant-shake {
+  0%, 76%, 100% { transform: rotate(0); }
+  80% { transform: rotate(-10deg); }
+  84% { transform: rotate(9deg); }
+  88% { transform: rotate(-6deg); }
+  92% { transform: rotate(4deg); }
+  96% { transform: rotate(0); }
+}
+
+.pendant-badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 9px;
+  background: #ff3b30;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  font-style: normal;
+  line-height: 18px;
+  padding: 0 4px;
+}
+
+.pendant-timer {
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(94, 92, 230, 0.95);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  font-style: normal;
+  border-radius: 8px;
+  padding: 1px 6px;
+  white-space: nowrap;
+}
+
+/* 弹窗遮罩（渲染在播放器内，全屏模式下同样可见） */
+.evm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(4px);
+  animation: evm-in 0.2s ease;
+}
+
+@keyframes evm-in {
+  from { opacity: 0; }
+}
+
+.evm-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 50%;
+  cursor: pointer;
+  color: rgba(255, 255, 255, 0.8);
+  background: rgba(0, 0, 0, 0.25);
+  font-size: 14px;
+}
+
+/* 红包卡片 */
+.rpm-card {
+  position: relative;
+  width: min(320px, 86vw);
+  border-radius: 22px;
+  padding: 28px 24px 34px;
+  text-align: center;
+  color: #ffe1b8;
+  background: linear-gradient(165deg, #e0483e, #c02b23 55%, #a81f18);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  animation: rpm-pop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes rpm-pop {
+  from { transform: scale(0.7); opacity: 0; }
+}
+
+.rpm-icon {
+  font-size: 52px;
+  filter: drop-shadow(0 6px 16px rgba(0, 0, 0, 0.4));
+}
+
+.rpm-title {
+  margin: 10px 0 2px;
+  font-size: 18px;
+  font-weight: 700;
+  color: #ffd9a0;
+}
+
+.rpm-sub {
+  margin: 0 0 20px;
+  font-size: 13px;
+  opacity: 0.75;
+}
+
+.rpm-open {
+  width: 86px;
+  height: 86px;
+  border-radius: 50%;
+  border: 0;
+  cursor: pointer;
+  font-size: 34px;
+  font-weight: 700;
+  color: #a8321f;
+  background: radial-gradient(circle at 35% 30%, #ffe9b0, #f7c85c 60%, #e2a93a);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4), inset 0 2px 0 rgba(255, 255, 255, 0.6);
+  transition: transform 0.15s ease;
+}
+
+.rpm-open:hover:not(:disabled) {
+  transform: scale(1.07);
+}
+
+.rpm-open:disabled {
+  opacity: 0.75;
+  cursor: default;
+  font-size: 15px;
+}
+
+.rpm-open.opening {
+  animation: rpm-spin 0.8s linear infinite;
+}
+
+@keyframes rpm-spin {
+  to { transform: rotateY(360deg); }
+}
+
+.rpm-result {
+  animation: rpm-pop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.rpm-amount {
+  font-size: 44px;
+  font-weight: 800;
+  color: #ffd60a;
+  text-shadow: 0 4px 20px rgba(255, 214, 10, 0.4);
+}
+
+.rpm-result p {
+  margin: 6px 0 0;
+  font-size: 14px;
+}
+
+.rpm-fail {
+  font-size: 40px;
+}
+
+/* 抽奖卡片 */
+.lot-card {
+  position: relative;
+  width: min(340px, 88vw);
+  border-radius: 22px;
+  padding: 28px 24px 30px;
+  text-align: center;
+  color: #fff;
+  background: linear-gradient(165deg, #4a3ad4, #372aa8 55%, #241c74);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  animation: rpm-pop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.lot-icon {
+  font-size: 46px;
+}
+
+.lot-title {
+  margin: 8px 0 4px;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.lot-count {
+  font-size: 48px;
+  font-weight: 800;
+  color: #ffd60a;
+  line-height: 1.2;
+}
+
+.lot-count span {
+  font-size: 20px;
+  margin-left: 2px;
+  opacity: 0.7;
+}
+
+.lot-sub {
+  margin: 6px 0 16px;
+  font-size: 13px;
+  opacity: 0.8;
+}
+
+.lot-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: center;
+}
+
+.lot-join {
+  width: 100%;
+  padding: 12px 0;
+  border: 0;
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 700;
+  color: #241c74;
+  background: linear-gradient(135deg, #ffe9b0, #f7c85c);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  transition: transform 0.15s ease;
+}
+
+.lot-join:hover:not(:disabled) {
+  transform: scale(1.03);
+}
+
+.lot-join:disabled {
+  cursor: default;
+}
+
+.lot-join.joined {
+  background: rgba(255, 255, 255, 0.15);
+  color: #ffd60a;
+}
+
+.lot-winners {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  margin-top: 4px;
+}
+
+.lot-winner {
+  background: rgba(255, 214, 10, 0.15);
+  border: 1px solid rgba(255, 214, 10, 0.4);
+  color: #ffd60a;
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 14px;
+  font-weight: 600;
 }
 
 /* 礼物选择格：固定 3 列（含移动端），不随全局 grid 断点塌成单列 */

@@ -5,6 +5,7 @@ import ChatPanel from "../components/ChatPanel";
 import DanmakuLayer from "../components/DanmakuLayer";
 import GiftEffectLayer, { type GiftFx } from "../components/GiftEffectLayer";
 import GiftPanel from "../components/GiftPanel";
+import LiveEvents from "../components/LiveEvents";
 import LotteryPanel, { type LotteryInfo } from "../components/LotteryPanel";
 import Modal from "../components/Modal";
 import Player from "../components/Player";
@@ -216,6 +217,24 @@ export default function Room() {
     const onRedpacketCreated = () => loadRedpackets();
     const onRedpacketClaimed = () => loadRedpackets();
     const onLotteryEvent = () => loadLottery();
+    // 开奖后服务端会清掉“当前抽奖”，重新拉取会变 null——直接用事件快照展示中奖结果
+    const onLotteryDrawn = (p: {
+      id: string;
+      winnerNames?: string[];
+      winners?: string[];
+      participants?: number;
+    }) => {
+      setLottery((prev) =>
+        prev && prev.id === p.id
+          ? {
+              ...prev,
+              drawn: true,
+              winners: p.winnerNames ?? p.winners ?? [],
+              participants: p.participants ?? prev.participants,
+            }
+          : prev,
+      );
+    };
     // 被禁言反馈：命中当前身份时禁用聊天输入并倒计时
     const onMute = (p: { userId?: string; guestId?: string; durationSec?: number }) => {
       const me = user?.id;
@@ -233,7 +252,7 @@ export default function Room() {
     socket.on("redpacket.claimed", onRedpacketClaimed);
     socket.on("lottery.started", onLotteryEvent);
     socket.on("lottery.joined", onLotteryEvent);
-    socket.on("lottery.drawn", onLotteryEvent);
+    socket.on("lottery.drawn", onLotteryDrawn);
     socket.on("mute", onMute);
 
     const heartbeat = setInterval(() => {
@@ -251,7 +270,7 @@ export default function Room() {
       socket.off("redpacket.claimed", onRedpacketClaimed);
       socket.off("lottery.started", onLotteryEvent);
       socket.off("lottery.joined", onLotteryEvent);
-      socket.off("lottery.drawn", onLotteryEvent);
+      socket.off("lottery.drawn", onLotteryDrawn);
       socket.off("mute", onMute);
       clearInterval(heartbeat);
     };
@@ -279,10 +298,19 @@ export default function Room() {
     }
   };
 
+  /** 抢红包（弹窗用）：成功返回金额，失败抛错由弹窗展示 */
+  const claimRedpacket = async (id: string): Promise<number> => {
+    try {
+      const r = await post<{ amount: number }>("/redpacket/claim", { redpacketId: id });
+      return r.amount;
+    } finally {
+      loadRedpackets();
+    }
+  };
+
   const onClaimRedpacket = async (id: string) => {
     try {
-      await post("/redpacket/claim", { redpacketId: id });
-      loadRedpackets();
+      await claimRedpacket(id);
     } catch (e) {
       setError((e as Error).message);
     }
@@ -297,10 +325,18 @@ export default function Room() {
     }
   };
 
-  const onJoinLottery = async (id: string) => {
+  /** 参与抽奖（弹窗用）：失败抛错由弹窗处理（如已参与） */
+  const joinLottery = async (id: string): Promise<void> => {
     try {
       await post("/lottery/join", { lotteryId: id });
+    } finally {
       loadLottery();
+    }
+  };
+
+  const onJoinLottery = async (id: string) => {
+    try {
+      await joinLottery(id);
     } catch (e) {
       setError((e as Error).message);
     }
@@ -308,8 +344,15 @@ export default function Room() {
 
   const onDrawLottery = async (id: string) => {
     try {
-      await post("/lottery/draw", { lotteryId: id });
-      loadLottery();
+      const r = await post<{ winners: string[]; winnerNames?: string[] }>("/lottery/draw", {
+        lotteryId: id,
+      });
+      // 开奖后“当前抽奖”已被清除，直接用返回值展示结果（观众端走 ws 事件）
+      setLottery((prev) =>
+        prev && prev.id === id
+          ? { ...prev, drawn: true, winners: r.winnerNames ?? r.winners }
+          : prev,
+      );
     } catch (e) {
       setError((e as Error).message);
     }
@@ -549,10 +592,28 @@ export default function Room() {
             >
               <DanmakuLayer messages={messages} visible={danmakuOn} />
               <GiftEffectLayer effects={giftFx} />
+              <LiveEvents
+                redpackets={redpackets}
+                lottery={lottery}
+                isLoggedIn={!!user}
+                isOwner={isOwner}
+                onClaim={claimRedpacket}
+                onJoin={joinLottery}
+                onDraw={onDrawLottery}
+              />
             </Player>
           ) : (
             <div className="player-wrap" style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
               <GiftEffectLayer effects={giftFx} />
+              <LiveEvents
+                redpackets={redpackets}
+                lottery={lottery}
+                isLoggedIn={!!user}
+                isOwner={isOwner}
+                onClaim={claimRedpacket}
+                onJoin={joinLottery}
+                onDraw={onDrawLottery}
+              />
               <div style={{ textAlign: "center" }}>
                 <div style={{ fontSize: 48 }}>📺</div>
                 <p className="muted">主播暂未开播</p>

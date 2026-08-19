@@ -97,6 +97,9 @@ export interface LotteryDrawnMessage {
   id: string;
   roomId: string;
   winners: string[];
+  /** 中奖者用户名（弹窗展示用） */
+  winnerNames?: string[];
+  participants?: number;
   ts: number;
 }
 
