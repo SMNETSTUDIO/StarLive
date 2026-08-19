@@ -607,9 +607,30 @@ export default function Room() {
               )}
             </div>
           )}
+
+          {/* 互动面板：填充播放器下方区域 */}
+          <div className="room-widgets">
+            <GiftPanel gifts={gifts} onSend={onSendGift} />
+            <RankPanel rewards={rewards} />
+            <RedpacketPanel
+              redpackets={redpackets}
+              isLoggedIn={!!user}
+              onClaim={onClaimRedpacket}
+              onCreate={onCreateRedpacket}
+            />
+            <LotteryPanel
+              lottery={lottery}
+              isOwner={isOwner}
+              isLoggedIn={!!user}
+              onJoin={onJoinLottery}
+              onDraw={onDrawLottery}
+              onCreate={onCreateLottery}
+            />
+          </div>
         </div>
 
-        <div className="flex-col">
+        {/* 聊天：sticky 定高，列表内部滚动 */}
+        <div className="room-side">
           <ChatPanel
             messages={messages}
             onSend={onSendDanmaku}
@@ -620,22 +641,6 @@ export default function Room() {
               setMuteTarget(m);
             }}
             mutedUntil={mutedUntil}
-          />
-          <GiftPanel gifts={gifts} onSend={onSendGift} />
-          <RankPanel rewards={rewards} />
-          <RedpacketPanel
-            redpackets={redpackets}
-            isLoggedIn={!!user}
-            onClaim={onClaimRedpacket}
-            onCreate={onCreateRedpacket}
-          />
-          <LotteryPanel
-            lottery={lottery}
-            isOwner={isOwner}
-            isLoggedIn={!!user}
-            onJoin={onJoinLottery}
-            onDraw={onDrawLottery}
-            onCreate={onCreateLottery}
           />
         </div>
       </div>

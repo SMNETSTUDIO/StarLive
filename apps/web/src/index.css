@@ -1895,6 +1895,31 @@ code {
   background: rgba(10, 132, 255, 0.65);
 }
 
+/* 聊天侧栏：跟随视口定高，列表内部滚动（评论区不再无限增高） */
+.room-side {
+  position: sticky;
+  top: 84px;
+  height: calc(100vh - 108px);
+  max-height: 860px;
+  min-height: 420px;
+  display: flex;
+  flex-direction: column;
+}
+
+.room-side > .card {
+  flex: 1;
+  min-height: 0;
+}
+
+/* 播放器下方互动面板双列网格 */
+.room-widgets {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+  align-items: start;
+}
+
 /* 聊天气泡 */
 .chat-list {
   display: flex;
@@ -1908,6 +1933,9 @@ code {
 .chat-msg {
   font-size: 14px;
   line-height: 1.45;
+  /* 连续长字符串强制折行，防止横向溢出 */
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .chat-msg .nick {
@@ -2054,6 +2082,15 @@ code {
 
 @media (max-width: 1024px) {
   .room-grid {
+    grid-template-columns: 1fr;
+  }
+  /* 单列时聊天不再 sticky，固定高度内部滚动 */
+  .room-side {
+    position: static;
+    height: 480px;
+    min-height: 0;
+  }
+  .room-widgets {
     grid-template-columns: 1fr;
   }
 }
