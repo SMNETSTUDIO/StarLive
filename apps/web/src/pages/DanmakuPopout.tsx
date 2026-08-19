@@ -16,10 +16,18 @@ export default function DanmakuPopout() {
     get<DanmakuMessage[]>(`/danmaku/recent?roomId=${roomId}`).then(setMessages).catch(() => undefined);
     const socket = getSocket();
     socket.emit("join_room", { roomId });
-    const onDanmaku = (m: DanmakuMessage) => setMessages((prev) => [...prev.slice(-100), m]);
+    // 断线重连后重新加入房间
+    const onReconnect = () => socket.emit("join_room", { roomId });
+    socket.on("connect", onReconnect);
+    // 按 roomId 过滤，杜绝串台
+    const onDanmaku = (m: DanmakuMessage) => {
+      if (m.roomId !== roomId) return;
+      setMessages((prev) => [...prev.slice(-100), m]);
+    };
     socket.on("danmaku", onDanmaku);
     return () => {
       socket.emit("leave_room", { roomId });
+      socket.off("connect", onReconnect);
       socket.off("danmaku", onDanmaku);
     };
   }, [roomId]);

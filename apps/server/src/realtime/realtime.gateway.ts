@@ -86,6 +86,11 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
         return;
       }
     }
+    // 单 socket 只属于一个直播间：加入新房前退出旧房，杜绝弹幕串台
+    const prevRoomId = client.data.roomId as string | undefined;
+    if (prevRoomId && prevRoomId !== payload.roomId) {
+      client.leave(roomKey(prevRoomId));
+    }
     client.join(roomKey(payload.roomId));
     client.data.roomId = payload.roomId;
   }

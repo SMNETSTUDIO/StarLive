@@ -173,9 +173,17 @@ export default function Room() {
 
     const socket = getSocket();
     socket.emit("join_room", { roomId, password: saved });
+    // 断线重连后服务端房间成员关系已丢失，必须重新加入
+    const onReconnect = () => socket.emit("join_room", { roomId, password: saved });
+    socket.on("connect", onReconnect);
 
-    const onDanmaku = (m: DanmakuMessage) => appendMessage(m);
+    // 所有房间事件按 roomId 过滤：单 socket 因任何原因残留多房间成员时不串台
+    const onDanmaku = (m: DanmakuMessage) => {
+      if (m.roomId !== roomId) return;
+      appendMessage(m);
+    };
     const onGift = (g: GiftMessage) => {
+      if (g.roomId !== roomId) return;
       const emoji = giftEmoji(g.giftId, g.giftIcon);
       // 写入聊天区
       appendMessage({
@@ -209,21 +217,36 @@ export default function Room() {
         .then((r) => setOnlineUsers(r.users))
         .catch(() => undefined);
     loadViewers();
-    const onPresence = (p: { viewerCount: number }) => {
+    const onPresence = (p: { roomId?: string; viewerCount: number }) => {
+      if (p.roomId && p.roomId !== roomId) return;
       setViewers(p.viewerCount);
       loadViewers();
     };
-    const onRoomStatus = (p: { status: string }) => setRoom((r) => (r ? { ...r, status: p.status } : r));
-    const onRedpacketCreated = () => loadRedpackets();
-    const onRedpacketClaimed = () => loadRedpackets();
-    const onLotteryEvent = () => loadLottery();
+    const onRoomStatus = (p: { roomId?: string; status: string }) => {
+      if (p.roomId && p.roomId !== roomId) return;
+      setRoom((r) => (r ? { ...r, status: p.status } : r));
+    };
+    const onRedpacketCreated = (p: { roomId?: string }) => {
+      if (p?.roomId && p.roomId !== roomId) return;
+      loadRedpackets();
+    };
+    const onRedpacketClaimed = (p: { roomId?: string }) => {
+      if (p?.roomId && p.roomId !== roomId) return;
+      loadRedpackets();
+    };
+    const onLotteryEvent = (p: { roomId?: string }) => {
+      if (p?.roomId && p.roomId !== roomId) return;
+      loadLottery();
+    };
     // 开奖后服务端会清掉“当前抽奖”，重新拉取会变 null——直接用事件快照展示中奖结果
     const onLotteryDrawn = (p: {
       id: string;
+      roomId?: string;
       winnerNames?: string[];
       winners?: string[];
       participants?: number;
     }) => {
+      if (p.roomId && p.roomId !== roomId) return;
       setLottery((prev) =>
         prev && prev.id === p.id
           ? {
@@ -262,6 +285,7 @@ export default function Room() {
 
     return () => {
       socket.emit("leave_room", { roomId });
+      socket.off("connect", onReconnect);
       socket.off("danmaku", onDanmaku);
       socket.off("gift", onGift);
       socket.off("presence", onPresence);
