@@ -2319,6 +2319,27 @@ code {
   font-weight: 600;
 }
 
+/* 后台批量操作条 */
+.batch-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+  border-radius: var(--radius-sm);
+  background: rgba(10, 132, 255, 0.1);
+  border: 1px solid rgba(10, 132, 255, 0.3);
+  font-size: 13.5px;
+  animation: gift-in 0.25s ease;
+}
+
+.batch-bar > span:first-child {
+  font-weight: 600;
+  color: var(--accent);
+  margin-right: 4px;
+}
+
 /* 礼物选择格：固定 3 列（含移动端），不随全局 grid 断点塌成单列 */
 .gift-grid {
   display: grid;

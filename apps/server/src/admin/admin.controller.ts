@@ -38,6 +38,39 @@ export class AdminController {
     return this.admin.setUserFlag(body.userId, body.field, body.value, req.user!.sub);
   }
 
+  /** 批量封禁/禁言 */
+  @Post("users-batch-flag")
+  usersBatchFlag(
+    @Req() req: AuthedRequest,
+    @Body() body: { userIds: string[]; field: "banned" | "muted"; value: boolean },
+  ) {
+    return this.admin.batchUserFlag(body.userIds, body.field, body.value, req.user!.sub);
+  }
+
+  /** 批量房间操作（封禁/解封/删除） */
+  @Post("rooms-batch")
+  roomsBatch(
+    @Req() req: AuthedRequest,
+    @Body() body: { roomIds: string[]; action: "ban" | "unban" | "delete" },
+  ) {
+    return this.admin.batchRoom(body.roomIds, body.action, req.user!.sub);
+  }
+
+  /** 批量删除录播 */
+  @Post("recordings-batch-delete")
+  recordingsBatchDelete(@Req() req: AuthedRequest, @Body() body: { recordingIds: string[] }) {
+    return this.admin.batchRecordingDelete(body.recordingIds, req.user!.sub);
+  }
+
+  /** 批量处理提现 */
+  @Post("withdrawals-batch")
+  withdrawalsBatch(
+    @Req() req: AuthedRequest,
+    @Body() body: { ids: string[]; action: "approve" | "reject" },
+  ) {
+    return this.admin.batchWithdrawal(body.ids, body.action, req.user!.sub);
+  }
+
   @Post("user-update")
   userUpdate(
     @Req() req: AuthedRequest,

@@ -97,6 +97,9 @@ export class AdminService {
   }
 
   async setUserFlag(userId: string, field: "banned" | "muted", value: boolean, adminId: string) {
+    // 校验存在，避免对不存在的 id 盲写出脏 hash（批量操作尤其容易带入无效 id）
+    const user = await getUserById(userId);
+    if (!user) throw new BizException(ErrorCode.NOT_FOUND, "用户不存在", 404);
     await setUserField(userId, field, value ? "true" : "false");
     await writeAdminAuditLog(`user_${field}_${value}`, adminId, { userId });
     return { ok: true };
@@ -419,6 +422,50 @@ export class AdminService {
       publishEvent(EVT.SYSTEM_RELOAD, { reason: "maintenance", ts: Date.now() });
     }
     return after;
+  }
+
+  /** 批量执行器：逐项执行、单项失败不阻断，返回成功数与失败明细 */
+  private async runBatch(
+    ids: string[],
+    fn: (id: string) => Promise<unknown>,
+  ): Promise<{ ok: true; succeeded: number; failed: { id: string; error: string }[] }> {
+    if (!Array.isArray(ids) || ids.length === 0) {
+      throw new BizException(ErrorCode.INVALID_AMOUNT, "未选择任何项");
+    }
+    if (ids.length > 200) {
+      throw new BizException(ErrorCode.INVALID_AMOUNT, "单次批量最多 200 项");
+    }
+    const failed: { id: string; error: string }[] = [];
+    let succeeded = 0;
+    for (const id of ids) {
+      try {
+        await fn(id);
+        succeeded++;
+      } catch (e) {
+        failed.push({ id, error: e instanceof Error ? e.message : "失败" });
+      }
+    }
+    return { ok: true, succeeded, failed };
+  }
+
+  batchUserFlag(userIds: string[], field: "banned" | "muted", value: boolean, adminId: string) {
+    return this.runBatch(userIds, (id) => this.setUserFlag(id, field, value, adminId));
+  }
+
+  batchRoom(roomIds: string[], action: "ban" | "unban" | "delete", adminId: string) {
+    return this.runBatch(roomIds, (id) =>
+      action === "delete"
+        ? this.adminRoomDelete(id, adminId)
+        : this.adminRoomBan(id, action === "ban", adminId),
+    );
+  }
+
+  batchRecordingDelete(recordingIds: string[], adminId: string) {
+    return this.runBatch(recordingIds, (id) => this.deleteRecording(id, adminId));
+  }
+
+  batchWithdrawal(ids: string[], action: "approve" | "reject", adminId: string) {
+    return this.runBatch(ids, (id) => this.processWithdrawal(id, action, adminId));
   }
 
   /** 强制刷新全部在线页面（前端资源更新、紧急公告等场景） */

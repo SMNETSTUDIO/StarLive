@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import Pagination, { pageCountOf, paginate } from "../../components/Pagination";
 import Modal from "../../components/Modal";
 import { get, post } from "../../lib/api";
+import { batchResultText, useSelection, type BatchResult } from "../../lib/use-selection";
 
 interface AdminRoom {
   id: string;
@@ -89,6 +90,8 @@ export default function AdminRooms() {
   const [keyword, setKeyword] = useState("");
   const [editing, setEditing] = useState<AdminRoom | null>(null);
   const [page, setPage] = useState(1);
+  const [batchMsg, setBatchMsg] = useState("");
+  const { selected, toggle, toggleAll, clear, allChecked } = useSelection();
 
   const load = () => get<AdminRoom[]>("/admin/rooms").then(setRooms).catch(() => undefined);
   useEffect(() => {
@@ -104,6 +107,19 @@ export default function AdminRooms() {
     if (!confirm("确认删除该房间？此操作不可恢复")) return;
     await post("/admin/room-delete", { roomId });
     load();
+  };
+
+  const batch = async (action: "ban" | "unban" | "delete", label: string) => {
+    const warn = action === "delete" ? "（不可恢复）" : "";
+    if (!confirm(`确认对选中的 ${selected.size} 个房间执行「${label}」${warn}？`)) return;
+    try {
+      const r = await post<BatchResult>("/admin/rooms-batch", { roomIds: [...selected], action });
+      setBatchMsg(batchResultText(r));
+      clear();
+      load();
+    } catch (e) {
+      setBatchMsg((e as Error).message);
+    }
   };
 
   const kw = keyword.trim().toLowerCase();
@@ -133,10 +149,36 @@ export default function AdminRooms() {
           }}
         />
       </div>
+      {batchMsg && <div className="alert alert-success">{batchMsg}</div>}
+      {selected.size > 0 && (
+        <div className="batch-bar">
+          <span>已选 {selected.size} 项</span>
+          <button className="btn btn-sm btn-danger" onClick={() => batch("ban", "封禁")}>
+            批量封禁
+          </button>
+          <button className="btn btn-sm" onClick={() => batch("unban", "解封")}>
+            批量解封
+          </button>
+          <button className="btn btn-sm btn-danger" onClick={() => batch("delete", "删除")}>
+            批量删除
+          </button>
+          <button className="btn btn-sm btn-ghost" onClick={clear}>
+            取消选择
+          </button>
+        </div>
+      )}
       <div className="table-wrap">
       <table className="table">
         <thead>
           <tr>
+            <th style={{ width: 34 }}>
+              <input
+                type="checkbox"
+                checked={allChecked(paged.map((r) => r.id))}
+                onChange={() => toggleAll(paged.map((r) => r.id))}
+                title="全选当前页"
+              />
+            </th>
             <th>房间</th>
             <th>房主</th>
             <th>分类</th>
@@ -148,13 +190,16 @@ export default function AdminRooms() {
         <tbody>
           {shown.length === 0 && (
             <tr>
-              <td className="table-empty" colSpan={6}>
+              <td className="table-empty" colSpan={7}>
                 没有匹配的房间
               </td>
             </tr>
           )}
           {paged.map((r) => (
             <tr key={r.id}>
+              <td>
+                <input type="checkbox" checked={selected.has(r.id)} onChange={() => toggle(r.id)} />
+              </td>
               <td>
                 {r.title}
                 <div className="muted small">{r.id}</div>

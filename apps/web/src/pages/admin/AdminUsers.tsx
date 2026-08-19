@@ -3,6 +3,7 @@ import Modal from "../../components/Modal";
 import Pagination, { pageCountOf, paginate } from "../../components/Pagination";
 import { get, post } from "../../lib/api";
 import { downloadCsv } from "../../lib/csv";
+import { batchResultText, useSelection, type BatchResult } from "../../lib/use-selection";
 
 const PAGE_SIZE = 20;
 
@@ -248,6 +249,8 @@ export default function AdminUsers() {
   const [keyword, setKeyword] = useState("");
   const [editing, setEditing] = useState<AdminUser | null>(null);
   const [page, setPage] = useState(1);
+  const [batchMsg, setBatchMsg] = useState("");
+  const { selected, toggle, toggleAll, clear, allChecked } = useSelection();
 
   const load = () => get<AdminUser[]>("/admin/users").then(setUsers).catch(() => undefined);
   useEffect(() => {
@@ -257,6 +260,22 @@ export default function AdminUsers() {
   const flag = async (userId: string, field: "banned" | "muted", value: boolean) => {
     await post("/admin/user-flag", { userId, field, value });
     load();
+  };
+
+  const batchFlag = async (field: "banned" | "muted", value: boolean, label: string) => {
+    if (!confirm(`确认对选中的 ${selected.size} 个用户执行「${label}」？`)) return;
+    try {
+      const r = await post<BatchResult>("/admin/users-batch-flag", {
+        userIds: [...selected],
+        field,
+        value,
+      });
+      setBatchMsg(batchResultText(r));
+      clear();
+      load();
+    } catch (e) {
+      setBatchMsg((e as Error).message);
+    }
   };
 
   const kw = keyword.trim().toLowerCase();
@@ -310,10 +329,39 @@ export default function AdminUsers() {
           </button>
         </div>
       </div>
+      {batchMsg && <div className="alert alert-success">{batchMsg}</div>}
+      {selected.size > 0 && (
+        <div className="batch-bar">
+          <span>已选 {selected.size} 项</span>
+          <button className="btn btn-sm btn-danger" onClick={() => batchFlag("banned", true, "封禁")}>
+            批量封禁
+          </button>
+          <button className="btn btn-sm" onClick={() => batchFlag("banned", false, "解封")}>
+            批量解封
+          </button>
+          <button className="btn btn-sm" onClick={() => batchFlag("muted", true, "禁言")}>
+            批量禁言
+          </button>
+          <button className="btn btn-sm" onClick={() => batchFlag("muted", false, "解除禁言")}>
+            批量解禁
+          </button>
+          <button className="btn btn-sm btn-ghost" onClick={clear}>
+            取消选择
+          </button>
+        </div>
+      )}
       <div className="table-wrap">
       <table className="table">
         <thead>
           <tr>
+            <th style={{ width: 34 }}>
+              <input
+                type="checkbox"
+                checked={allChecked(paged.map((u) => u.id))}
+                onChange={() => toggleAll(paged.map((u) => u.id))}
+                title="全选当前页"
+              />
+            </th>
             <th>用户</th>
             <th>邮箱</th>
             <th>余额</th>
@@ -325,13 +373,16 @@ export default function AdminUsers() {
         <tbody>
           {shown.length === 0 && (
             <tr>
-              <td className="table-empty" colSpan={6}>
+              <td className="table-empty" colSpan={7}>
                 没有匹配的用户
               </td>
             </tr>
           )}
           {paged.map((u) => (
             <tr key={u.id}>
+              <td>
+                <input type="checkbox" checked={selected.has(u.id)} onChange={() => toggle(u.id)} />
+              </td>
               <td>
                 <div className="flex" style={{ gap: 10 }}>
                   <span className="avatar" style={{ width: 28, height: 28, fontSize: 12 }}>
