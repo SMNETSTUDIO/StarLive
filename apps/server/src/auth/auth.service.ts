@@ -5,7 +5,7 @@ import { ErrorCode, Keys } from "@starlive/shared";
 import { BizException } from "../common/errors";
 import { redis } from "../common/redis";
 import { signJwt } from "../common/jwt";
-import { resolveAdmin } from "../common/admin";
+import { invalidateAdminContext, resolveAdmin } from "../common/admin";
 import {
   createUser,
   getUserByEmail,
@@ -50,6 +50,8 @@ export class AuthService {
     try {
       const created = await this.register(input);
       await r.hset(Keys.adminUserRoles, created.id, "super_admin");
+      // 保持「每次写 adminUserRoles 必失效缓存」的不变量（见 common/admin.ts）
+      invalidateAdminContext(created.id);
       await r.set(Keys.systemSetupDone, "1");
       return this.login({ account: created.username, password: input.password });
     } catch (err) {

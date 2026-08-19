@@ -6,6 +6,7 @@ import { BizException } from "../common/errors";
 import { EVT, publishEvent } from "../common/event-bus";
 import { redis } from "../common/redis";
 import { getRoom } from "../common/room-store";
+import { runtimeConfig } from "../common/runtime-config";
 import { getUserById } from "../common/user-store";
 
 const MAX_LEN = 30;
@@ -43,7 +44,6 @@ export class DanmakuService {
     // 全部前置校验并发执行（autoPipelining 合并为一次往返；原为 6+ 次串行）
     // global_mute 复用 runtimeConfig 的 10s 进程内缓存（后台保存配置时即时失效），
     // 免去每条弹幕一次 hget
-    const { runtimeConfig } = await import("../common/runtime-config");
     const [room, globalMute, user, roomMuted, rateOk, words] = await Promise.all([
       getRoom(input.roomId),
       runtimeConfig("global_mute"),

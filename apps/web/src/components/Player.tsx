@@ -7,10 +7,15 @@ const RETRY_MS = 4000;
 const AUTO_LEVEL = -1;
 
 // hls.js 模块级单例加载：保持独立 chunk 懒加载，但断流重试/换源
-// 反复调用 start() 时只解析一次动态 import，不重复走模块解析
+// 反复调用 start() 时只解析一次动态 import，不重复走模块解析。
+// 加载失败（弱网 chunk 拉取失败）时清空单例，下次重试重新 import，
+// 避免把被拒绝的 Promise 永久缓存导致播放器无法自愈
 let hlsModule: Promise<typeof import("hls.js")> | null = null;
 function loadHls(): Promise<typeof import("hls.js")> {
-  hlsModule ??= import("hls.js");
+  hlsModule ??= import("hls.js").catch((err) => {
+    hlsModule = null;
+    throw err;
+  });
   return hlsModule;
 }
 
@@ -67,7 +72,8 @@ export default function Player({ src, children, danmakuOn, onToggleDanmaku }: Pl
       retryRef.current = setTimeout(start, RETRY_MS);
     };
 
-    void loadHls().then(({ default: HlsCls }) => {
+    // chunk 加载失败（如弱网）时同样进入自动重试，而非停在 connecting
+    const startWithHls = loadHls().then(({ default: HlsCls }) => {
       if (sessionRef.current !== sid) return;
 
       if (HlsCls.isSupported()) {
@@ -122,6 +128,7 @@ export default function Player({ src, children, danmakuOn, onToggleDanmaku }: Pl
 
       scheduleRetry();
     });
+    void startWithHls.catch(() => scheduleRetry());
   }, [src]);
 
   useEffect(() => {
