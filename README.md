@@ -179,3 +179,15 @@ pnpm test         # 单元测试（Vitest）unit tests
 **允许商用**：可自由使用、修改、分发及用于商业产品，需保留版权与许可声明。详见 [LICENSE](LICENSE)。
 
 **Commercial use allowed**: free to use, modify, distribute, and build commercial products on top, provided copyright and license notices are retained. See [LICENSE](LICENSE).
+
+---
+
+## 项目增长 Project Growth
+
+<p align="center">
+  <a href="https://github.com/MacRimi/repo-growth">
+    <img src="assets/repo-growth.svg" alt="Project growth" width="900">
+  </a>
+</p>
+
+*由 [repo-growth](https://github.com/MacRimi/repo-growth) 每日自动更新 / Updated daily by repo-growth.*

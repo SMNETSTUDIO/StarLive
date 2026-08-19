@@ -1,0 +1,24 @@
+name: Update repository growth
+
+on:
+  schedule:
+    - cron: "43 4 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: repo-growth
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: MacRimi/repo-growth@v1
+        with:
+          title: StarLive growth
+          output: assets/repo-growth.svg
+          metrics: stars,forks
