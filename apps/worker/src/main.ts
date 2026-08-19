@@ -48,22 +48,40 @@ async function processJob(raw: string): Promise<void> {
   else if (job.type === "transcode") await runTranscode(job);
 }
 
+let shuttingDown = false;
+
+function installShutdown(): void {
+  const onSignal = (sig: string) => {
+    // eslint-disable-next-line no-console
+    console.log(`[worker] ${sig} 收到，停止取新任务，等待当前任务完成…`);
+    shuttingDown = true;
+  };
+  process.on("SIGTERM", () => onSignal("SIGTERM"));
+  process.on("SIGINT", () => onSignal("SIGINT"));
+}
+
 async function main(): Promise<void> {
+  installShutdown();
   // eslint-disable-next-line no-console
   console.log(`StarLive worker started (queues: ${QUEUES.join(", ")})`);
 
-  while (true) {
-    // BRPOP 阻塞消费，超时 5s 后继续循环
+  while (!shuttingDown) {
+    // BRPOP 阻塞消费，超时 5s 后继续循环（收到停机信号时至多等 5s 即退出）
     const res = await redis.brpop(...QUEUES, 5);
     if (!res) continue;
     const [, raw] = res;
     try {
+      // 当前任务跑完再检查停机标志，避免中途硬杀导致任务丢失
       await processJob(raw);
     } catch (err) {
       // eslint-disable-next-line no-console
       console.error("[worker] job failed", err);
     }
   }
+
+  // eslint-disable-next-line no-console
+  console.log("[worker] 已优雅退出");
+  await redis.quit();
 }
 
 main().catch((err) => {

@@ -94,6 +94,16 @@ async function bootstrap(): Promise<void> {
     });
   }
 
+  // 优雅退出：容器停机时先停止接收新连接，让在途请求/WS 平滑收尾
+  app.enableShutdownHooks();
+  for (const sig of ["SIGTERM", "SIGINT"] as const) {
+    process.on(sig, () => {
+      // eslint-disable-next-line no-console
+      console.log(`[server] ${sig} 收到，正在关闭…`);
+      void app.close().then(() => process.exit(0));
+    });
+  }
+
   await app.listen(config.port, config.host);
   // eslint-disable-next-line no-console
   console.log(
