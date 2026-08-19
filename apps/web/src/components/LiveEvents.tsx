@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import type { LotteryInfo } from "./LotteryPanel";
 import type { RedpacketItem } from "./RedpacketPanel";
 
@@ -21,7 +21,7 @@ type RpPhase = { kind: "open" } | { kind: "opening" } | { kind: "result"; amount
  * 进行中的事件在播放器右上角常驻挂件，随时可点开参与。
  * 渲染在播放器内部，全屏时同样可见可点。
  */
-export default function LiveEvents({
+function LiveEvents({
   redpackets,
   lottery,
   isLoggedIn,
@@ -231,3 +231,7 @@ export default function LiveEvents({
     </>
   );
 }
+
+// memo：Room 每收到一条弹幕即 setState 重渲染，此处 props（回调在 Room 已 useCallback
+// 稳定、redpackets/lottery 引用未变）不变则跳过，避免重置内部弹窗状态与无谓重绘
+export default memo(LiveEvents);

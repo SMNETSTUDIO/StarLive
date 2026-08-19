@@ -15,6 +15,25 @@ function fmtCountdown(until: number): string {
   return `${s} 秒`;
 }
 
+/**
+ * 禁言横幅：自持倒计时，1s tick 只重渲染本横幅，
+ * 不再连累整个 ChatPanel（消息列表/输入框）每秒重绘。
+ */
+function MutedBanner({ mutedUntil }: { mutedUntil: number }) {
+  const [, tick] = useState(0);
+  useEffect(() => {
+    if (mutedUntil === Infinity) return;
+    const t = setInterval(() => tick((v) => v + 1), 1000);
+    return () => clearInterval(t);
+  }, [mutedUntil]);
+  return (
+    <div className="alert" style={{ margin: 0, textAlign: "center" }}>
+      🔇 你已被禁言
+      {mutedUntil !== Infinity && <>，{fmtCountdown(mutedUntil)}后恢复</>}
+    </div>
+  );
+}
+
 export default function ChatPanel({
   messages,
   onSend,
@@ -32,7 +51,6 @@ export default function ChatPanel({
 }) {
   const [text, setText] = useState("");
   const [showEmoji, setShowEmoji] = useState(false);
-  const [, forceTick] = useState(0);
   const listRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -40,13 +58,8 @@ export default function ChatPanel({
     if (el) el.scrollTop = el.scrollHeight;
   }, [messages.length]);
 
-  // 禁言倒计时每秒刷新
+  // 是否禁言由 props 直接判定；倒计时刷新下放到 MutedBanner，避免整面板每秒重渲染
   const isMuted = mutedUntil === Infinity || mutedUntil > Date.now();
-  useEffect(() => {
-    if (!isMuted || mutedUntil === Infinity) return;
-    const t = setInterval(() => forceTick((v) => v + 1), 1000);
-    return () => clearInterval(t);
-  }, [isMuted, mutedUntil]);
 
   const submit = () => {
     if (!text.trim() || isMuted) return;
@@ -102,10 +115,7 @@ export default function ChatPanel({
         </div>
       )}
       {isMuted ? (
-        <div className="alert" style={{ margin: 0, textAlign: "center" }}>
-          🔇 你已被禁言
-          {mutedUntil !== Infinity && <>，{fmtCountdown(mutedUntil)}后恢复</>}
-        </div>
+        <MutedBanner mutedUntil={mutedUntil} />
       ) : (
         <div className="flex" style={{ gap: 8 }}>
           <button

@@ -41,10 +41,18 @@ export default function LiveList() {
         .catch(() => alive && setLoading(false));
     };
     load();
-    const timer = setInterval(load, 20000);
+    // 后台标签页不轮询，省带宽/电量；切回前台立即拉一次
+    const timer = setInterval(() => {
+      if (!document.hidden) load();
+    }, 20000);
+    const onVisible = () => {
+      if (!document.hidden) load();
+    };
+    document.addEventListener("visibilitychange", onVisible);
     return () => {
       alive = false;
       clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisible);
     };
   }, [category]);
 

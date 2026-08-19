@@ -1,11 +1,11 @@
-import { useRef } from "react";
+import { memo, useMemo, useRef } from "react";
 import type { DanmakuMessage } from "@starlive/shared";
 
 const LANES = 12;
 const DURATION_S = 10;
 const HISTORY_MAX = 15;
 
-export default function DanmakuLayer({
+function DanmakuLayer({
   messages,
   visible = true,
 }: {
@@ -16,31 +16,36 @@ export default function DanmakuLayer({
   const mountTs = useRef(Date.now());
   const laneOf = useRef(new Map<string, number>());
   const nextLane = useRef(0);
-
-  // 历史弹幕（进房前的）：用负延迟错开铺在屏幕各处，模拟“一直在滚”的效果，
-  // 避免同一瞬间从同一点齐步走叠成一团；新弹幕正常从右边缘进场
-  const history = messages.filter((m) => m.ts < mountTs.current).slice(-HISTORY_MAX);
-  const live = messages.filter((m) => m.ts >= mountTs.current).slice(-30);
   const delayOf = useRef(new Map<string, number>());
-  history.forEach((m, i) => {
-    if (!delayOf.current.has(m.id)) {
-      // 越早的历史弹幕越靠左（动画进度越深），均匀铺开在前 80% 行程
-      delayOf.current.set(m.id, -((history.length - i) / (history.length + 1)) * DURATION_S * 0.8);
-    }
-  });
 
-  // 轮转分配弹道，相邻弹幕错行不重叠
-  const all = [...history, ...live];
-  for (const m of all) {
-    if (!laneOf.current.has(m.id)) {
-      laneOf.current.set(m.id, nextLane.current);
-      nextLane.current = (nextLane.current + 1) % LANES;
+  // 派生数据仅在 messages 变化时重算：高频渲染（倒计时/父组件 setState）下避免
+  // 每帧重复 filter/slice 与 forEach 延迟计算（原先每次渲染 ~75-150 次运算）
+  const all = useMemo(() => {
+    // 历史弹幕（进房前的）：用负延迟错开铺在屏幕各处，模拟“一直在滚”的效果，
+    // 避免同一瞬间从同一点齐步走叠成一团；新弹幕正常从右边缘进场
+    const history = messages.filter((m) => m.ts < mountTs.current).slice(-HISTORY_MAX);
+    const live = messages.filter((m) => m.ts >= mountTs.current).slice(-30);
+    history.forEach((m, i) => {
+      if (!delayOf.current.has(m.id)) {
+        // 越早的历史弹幕越靠左（动画进度越深），均匀铺开在前 80% 行程
+        delayOf.current.set(m.id, -((history.length - i) / (history.length + 1)) * DURATION_S * 0.8);
+      }
+    });
+
+    // 轮转分配弹道，相邻弹幕错行不重叠
+    const merged = [...history, ...live];
+    for (const m of merged) {
+      if (!laneOf.current.has(m.id)) {
+        laneOf.current.set(m.id, nextLane.current);
+        nextLane.current = (nextLane.current + 1) % LANES;
+      }
     }
-  }
-  if (laneOf.current.size > 200) {
-    const keep = new Set(all.map((m) => m.id));
-    for (const id of laneOf.current.keys()) if (!keep.has(id)) laneOf.current.delete(id);
-  }
+    if (laneOf.current.size > 200) {
+      const keep = new Set(merged.map((m) => m.id));
+      for (const id of laneOf.current.keys()) if (!keep.has(id)) laneOf.current.delete(id);
+    }
+    return merged;
+  }, [messages]);
 
   return (
     <div className="danmaku-layer" style={visible ? undefined : { visibility: "hidden" }}>
@@ -61,3 +66,6 @@ export default function DanmakuLayer({
     </div>
   );
 }
+
+// memo：父组件因倒计时/其他状态频繁重渲染时，messages 引用不变则跳过本层
+export default memo(DanmakuLayer);
