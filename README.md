@@ -98,16 +98,23 @@ pnpm dev:worker   # 录播 Worker
 
 需要本地 Redis（或改 `REDIS_URL` 指向 Upstash）与 MediaMTX（或用 `docker compose up -d redis mediamtx` 单独起依赖）。
 
-## 🔑 环境变量
+## 🔑 配置
 
-关键变量见根目录 `.env.example`：
+**环境变量只需两个必填项**（见根目录 `.env.example`）：
 
-- `JWT_SECRET` — JWT 签名密钥（必填）
-- `REDIS_URL` — Redis 连接串（自托管 `redis://:password@localhost:6379` 或 Upstash）
-- `ADMIN_USER_IDS` — （可选）通过环境变量强制指定超管用户 ID；一般无需配置，首次部署由网页初始化向导创建管理员
-- `STREAM_PROVIDER` — `selfhosted`（默认）/ `mux`；`MEDIAMTX_API` / `MEDIAMTX_AUTH_HOOK` 对应配置
-- `EPAY_*` / `ALIPAY_*` / `WECHAT_*` / `STRIPE_*` — 支付网关（按需填写，`mock` 网关可沙箱联调）
-- 凭据不提交仓库，通过 `.env` 注入
+- `REDIS_URL` — Redis 连接串（自托管 `redis://:password@localhost:6379`，Upstash 用 `rediss://` TLS）
+- `JWT_SECRET` — JWT 签名密钥（`openssl rand -hex 32` 生成）
+
+部署拓扑相关的基础设施变量（`PORT`/`HOST`、`MEDIAMTX_*`、`FFMPEG_PATH`、Cookie 策略等）有合理默认值，按部署方式调整。
+
+**其余业务配置在管理后台设置**（`/admin` → 系统设置，存 Redis、即时生效、优先于环境变量）：
+
+- 站点对外地址（支付回调 / HLS 播放地址的生成基准）
+- OAuth 第三方登录（提供方名称、Client ID/Secret、授权/令牌/用户信息地址）
+- 支付网关（易支付 / 支付宝 / 微信 APIv3 / Stripe，密钥掩码回显，可独立启停）
+- 功能开关（维护模式、注册、录播、抽奖等）、经济参数、系统公告
+
+同名环境变量仍作为「后台未设置时的兜底值」被读取，适合偏好 CI/IaC 管密钥的场景；凭据不提交仓库。
 
 ## 🎬 直播链路
 
