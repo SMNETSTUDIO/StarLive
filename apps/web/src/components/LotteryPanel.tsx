@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { memo, useEffect, useState } from "react";
 
 export interface LotteryInfo {
   id: string;
@@ -10,7 +10,7 @@ export interface LotteryInfo {
   winners?: string[];
 }
 
-export default function LotteryPanel({
+function LotteryPanel({
   lottery,
   isOwner,
   isLoggedIn,
@@ -114,3 +114,6 @@ export default function LotteryPanel({
     </div>
   );
 }
+
+/** 弹幕高频重渲染时跳过（props 稳定引用由 Room useCallback 保证） */
+export default memo(LotteryPanel);

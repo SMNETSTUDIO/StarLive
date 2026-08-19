@@ -321,59 +321,79 @@ export default function Room() {
     }
   };
 
-  const onSendGift = async (giftId: string, count: number) => {
-    try {
-      await post("/gift/send", { roomId, giftId, count });
-    } catch (e) {
-      setError((e as Error).message);
-    }
-  };
+  // 以下回调 useCallback 稳定引用：互动面板已 memo 化，
+  // 弹幕高频到达触发的 Room 重渲染不再连带重渲染各面板
+  const onSendGift = useCallback(
+    async (giftId: string, count: number) => {
+      try {
+        await post("/gift/send", { roomId, giftId, count });
+      } catch (e) {
+        setError((e as Error).message);
+      }
+    },
+    [roomId],
+  );
 
   /** 抢红包（弹窗用）：成功返回金额，失败抛错由弹窗展示 */
-  const claimRedpacket = async (id: string): Promise<number> => {
-    try {
-      const r = await post<{ amount: number }>("/redpacket/claim", { redpacketId: id });
-      return r.amount;
-    } finally {
-      loadRedpackets();
-    }
-  };
+  const claimRedpacket = useCallback(
+    async (id: string): Promise<number> => {
+      try {
+        const r = await post<{ amount: number }>("/redpacket/claim", { redpacketId: id });
+        return r.amount;
+      } finally {
+        loadRedpackets();
+      }
+    },
+    [loadRedpackets],
+  );
 
-  const onClaimRedpacket = async (id: string) => {
-    try {
-      await claimRedpacket(id);
-    } catch (e) {
-      setError((e as Error).message);
-    }
-  };
+  const onClaimRedpacket = useCallback(
+    async (id: string) => {
+      try {
+        await claimRedpacket(id);
+      } catch (e) {
+        setError((e as Error).message);
+      }
+    },
+    [claimRedpacket],
+  );
 
-  const onCreateRedpacket = async (total: number, count: number, mode: string) => {
-    try {
-      await post("/redpacket/create", { roomId, total, count, mode });
-      loadRedpackets();
-    } catch (e) {
-      setError((e as Error).message);
-    }
-  };
+  const onCreateRedpacket = useCallback(
+    async (total: number, count: number, mode: string) => {
+      try {
+        await post("/redpacket/create", { roomId, total, count, mode });
+        loadRedpackets();
+      } catch (e) {
+        setError((e as Error).message);
+      }
+    },
+    [roomId, loadRedpackets],
+  );
 
   /** 参与抽奖（弹窗用）：失败抛错由弹窗处理（如已参与） */
-  const joinLottery = async (id: string): Promise<void> => {
-    try {
-      await post("/lottery/join", { lotteryId: id });
-    } finally {
-      loadLottery();
-    }
-  };
+  const joinLottery = useCallback(
+    async (id: string): Promise<void> => {
+      try {
+        await post("/lottery/join", { lotteryId: id });
+      } finally {
+        loadLottery();
+      }
+    },
+    [loadLottery],
+  );
 
-  const onJoinLottery = async (id: string) => {
-    try {
-      await joinLottery(id);
-    } catch (e) {
-      setError((e as Error).message);
-    }
-  };
+  const onJoinLottery = useCallback(
+    async (id: string) => {
+      try {
+        await joinLottery(id);
+      } catch (e) {
+        setError((e as Error).message);
+      }
+    },
+    [joinLottery],
+  );
 
-  const onDrawLottery = async (id: string) => {
+  const onDrawLottery = useCallback(async (id: string) => {
     try {
       const r = await post<{ winners: string[]; winnerNames?: string[] }>("/lottery/draw", {
         lotteryId: id,
@@ -387,7 +407,7 @@ export default function Room() {
     } catch (e) {
       setError((e as Error).message);
     }
-  };
+  }, []);
 
   const openReport = () => {
     if (!user) {
@@ -470,14 +490,17 @@ export default function Room() {
     }
   };
 
-  const onCreateLottery = async (title: string, winnerCount: number, durationSec: number) => {
-    try {
-      await post("/lottery/create", { roomId, title, winnerCount, durationSec });
-      loadLottery();
-    } catch (e) {
-      setError((e as Error).message);
-    }
-  };
+  const onCreateLottery = useCallback(
+    async (title: string, winnerCount: number, durationSec: number) => {
+      try {
+        await post("/lottery/create", { roomId, title, winnerCount, durationSec });
+        loadLottery();
+      } catch (e) {
+        setError((e as Error).message);
+      }
+    },
+    [roomId, loadLottery],
+  );
 
   if (needPassword) {
     return (

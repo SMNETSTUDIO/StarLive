@@ -8,6 +8,18 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [react()],
+    build: {
+      rollupOptions: {
+        output: {
+          // 框架依赖单独分块：发版时业务代码更新不影响 vendor 缓存
+          //（配合服务端 assets immutable 缓存，回访者只需重新下载业务 chunk）
+          manualChunks: {
+            "vendor-react": ["react", "react-dom", "react-router-dom"],
+            "vendor-socket": ["socket.io-client"],
+          },
+        },
+      },
+    },
     server: {
       host: "0.0.0.0",
       // 仅开发热更新用；生产由 server 在 3000 端口一体化托管前端

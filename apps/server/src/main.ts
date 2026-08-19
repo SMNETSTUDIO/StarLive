@@ -15,12 +15,18 @@ import { config } from "./config/config";
 /** /hls 反向代理到 MediaMTX（单端口部署，路径原样透传，与 Vite 代理行为一致） */
 function hlsProxy(target: string) {
   const base = new URL(target);
-  const client = base.protocol === "https:" ? https : http;
+  const isHttps = base.protocol === "https:";
+  const client = isHttps ? https : http;
+  // 长连接复用：HLS 每几秒拉一次分片，避免每个分片都重新 TCP 握手
+  const agent = isHttps
+    ? new https.Agent({ keepAlive: true, maxSockets: 128 })
+    : new http.Agent({ keepAlive: true, maxSockets: 128 });
   return (req: Request, res: Response): void => {
     const proxyReq = client.request(
       {
+        agent,
         hostname: base.hostname,
-        port: base.port || (base.protocol === "https:" ? 443 : 80),
+        port: base.port || (isHttps ? 443 : 80),
         path: req.originalUrl,
         method: req.method,
         headers: { ...req.headers, host: base.host },

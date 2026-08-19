@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { memo, useState } from "react";
 import type { GiftDefinition } from "@starlive/shared";
 
 /** 默认礼物 emoji（后端未配置 icon 时按 id 匹配） */
@@ -10,7 +10,7 @@ const GIFT_EMOJI: Record<string, string> = {
   crown: "👑",
 };
 
-export default function GiftPanel({
+function GiftPanel({
   gifts,
   onSend,
 }: {
@@ -59,3 +59,6 @@ export default function GiftPanel({
     </div>
   );
 }
+
+/** 弹幕高频重渲染时跳过（props 稳定引用由 Room useCallback 保证） */
+export default memo(GiftPanel);

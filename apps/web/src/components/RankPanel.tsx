@@ -1,3 +1,4 @@
+import { memo } from "react";
 export interface RewardRecord {
   id: string;
   fromUserId: string;
@@ -8,7 +9,7 @@ export interface RewardRecord {
 const MEDALS = ["🥇", "🥈", "🥉"];
 
 /** 房间贡献榜：按打赏总额聚合 TOP 5 */
-export default function RankPanel({ rewards }: { rewards: RewardRecord[] }) {
+function RankPanel({ rewards }: { rewards: RewardRecord[] }) {
   const byUser = new Map<string, { name: string; total: number }>();
   for (const r of rewards) {
     const key = r.fromUserId;
@@ -46,3 +47,5 @@ export default function RankPanel({ rewards }: { rewards: RewardRecord[] }) {
     </div>
   );
 }
+
+export default memo(RankPanel);

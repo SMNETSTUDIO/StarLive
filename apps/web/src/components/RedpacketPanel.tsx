@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { memo, useState } from "react";
 
 export interface RedpacketItem {
   id: string;
@@ -10,7 +10,7 @@ export interface RedpacketItem {
   empty: boolean;
 }
 
-export default function RedpacketPanel({
+function RedpacketPanel({
   redpackets,
   isLoggedIn,
   onClaim,
@@ -102,3 +102,6 @@ export default function RedpacketPanel({
     </div>
   );
 }
+
+/** 弹幕高频重渲染时跳过（props 稳定引用由 Room useCallback 保证） */
+export default memo(RedpacketPanel);
