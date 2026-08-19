@@ -5,6 +5,7 @@ import Footer from "./components/Footer";
 import TopBar from "./components/TopBar";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { get } from "./lib/api";
+import { getSocket } from "./lib/socket";
 import Banned from "./pages/Banned";
 import Maintenance from "./pages/Maintenance";
 import NotFound from "./pages/NotFound";
@@ -55,6 +56,18 @@ function Shell() {
     get<{ needsSetup: boolean }>("/auth/setup-status")
       .then((r) => setNeedsSetup(r.needsSetup))
       .catch(() => setNeedsSetup(false));
+  }, []);
+
+  // 全站强制刷新（维护模式切换 / 管理员触发）：随机延迟 0.5~3.5s 防止刷新风暴
+  useEffect(() => {
+    const socket = getSocket();
+    const onReload = () => {
+      setTimeout(() => window.location.reload(), 500 + Math.random() * 3000);
+    };
+    socket.on("system.reload", onReload);
+    return () => {
+      socket.off("system.reload", onReload);
+    };
   }, []);
 
   if (loading || needsSetup === null) {

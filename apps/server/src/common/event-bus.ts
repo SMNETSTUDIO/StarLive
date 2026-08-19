@@ -22,6 +22,7 @@ export const EVT = {
   LOTTERY_JOINED: WS_EVENTS.LOTTERY_JOINED,
   LOTTERY_DRAWN: WS_EVENTS.LOTTERY_DRAWN,
   MUTE: WS_EVENTS.MUTE,
+  SYSTEM_RELOAD: WS_EVENTS.SYSTEM_RELOAD,
 } as const;
 
 export interface EventPayloads {
@@ -35,6 +36,7 @@ export interface EventPayloads {
   [EVT.LOTTERY_JOINED]: LotteryMessage;
   [EVT.LOTTERY_DRAWN]: LotteryDrawnMessage;
   [EVT.MUTE]: { roomId: string; userId?: string; guestId?: string; durationSec?: number };
+  [EVT.SYSTEM_RELOAD]: { reason: string; ts: number };
 }
 
 /**

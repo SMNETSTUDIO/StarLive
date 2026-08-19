@@ -188,6 +188,12 @@ export class AdminController {
     return this.admin.updateFeatures(body, req.user!.sub);
   }
 
+  /** 强制刷新全部在线页面 */
+  @Post("broadcast-reload")
+  broadcastReload(@Req() req: AuthedRequest) {
+    return this.admin.broadcastReload(req.user!.sub);
+  }
+
   @Get("payment-gateways")
   @UseGuards(SuperAdminGuard)
   paymentGateways() {

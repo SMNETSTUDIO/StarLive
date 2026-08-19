@@ -142,6 +142,20 @@ export default function AdminSettings() {
                 <input type="checkbox" checked={features[key]} onChange={() => toggle(key)} />
               </label>
             ))}
+          <p className="muted small" style={{ margin: "10px 0 12px" }}>
+            切换维护模式会自动强制刷新所有在线页面
+          </p>
+          <button
+            className="btn btn-sm"
+            style={{ width: "100%" }}
+            onClick={async () => {
+              if (!confirm("确认强制刷新所有在线用户的页面？")) return;
+              await post("/admin/broadcast-reload");
+              setMsg("已广播刷新指令，所有在线页面将在 0.5~3.5 秒内刷新");
+            }}
+          >
+            🔄 强制刷新全部在线页面
+          </button>
         </div>
         <div className="card">
           <h3>经济配置</h3>

@@ -48,12 +48,17 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
   onModuleInit(): void {
     // 订阅业务事件总线 → 广播到对应房间（事件名与 EVT 一致）
     for (const eventName of Object.values(EVT)) {
+      if (eventName === EVT.SYSTEM_RELOAD) continue;
       eventBus.on(eventName, (payload: { roomId?: string }) => {
         if (payload?.roomId) {
           this.emitToRoom(payload.roomId, eventName, payload);
         }
       });
     }
+    // 全站广播：强制所有在线页面刷新（维护模式切换 / 管理员手动触发）
+    eventBus.on(EVT.SYSTEM_RELOAD, (payload) => {
+      this.server.emit(EVT.SYSTEM_RELOAD, payload);
+    });
   }
 
   handleConnection(client: Socket): void {

@@ -407,11 +407,26 @@ export class AdminService {
   }
 
   async updateFeatures(features: Record<string, boolean | string>, adminId: string) {
+    const before = await this.system.getFeatures();
     for (const [k, v] of Object.entries(features)) {
       await this.system.setFeature(k, v);
     }
     await writeAdminAuditLog("features_update", adminId, features);
-    return this.system.getFeatures();
+    const after = await this.system.getFeatures();
+    // 维护模式开/关：强制所有在线页面刷新，立即进入/退出维护页
+    if (before.maintenanceEnabled !== after.maintenanceEnabled) {
+      const { EVT, publishEvent } = await import("../common/event-bus");
+      publishEvent(EVT.SYSTEM_RELOAD, { reason: "maintenance", ts: Date.now() });
+    }
+    return after;
+  }
+
+  /** 强制刷新全部在线页面（前端资源更新、紧急公告等场景） */
+  async broadcastReload(adminId: string) {
+    const { EVT, publishEvent } = await import("../common/event-bus");
+    publishEvent(EVT.SYSTEM_RELOAD, { reason: "admin", ts: Date.now() });
+    await writeAdminAuditLog("broadcast_reload", adminId, {});
+    return { ok: true };
   }
 
   /** 支付网关可后台配置的字段（白名单）与其中的敏感项 */

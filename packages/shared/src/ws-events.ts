@@ -19,6 +19,8 @@ export const WS_EVENTS = {
   PRESENCE: "presence",
   ROOM_STATUS: "room.status",
   MUTE: "mute",
+  /** 全站广播：要求所有在线页面刷新（维护模式切换 / 管理员手动触发） */
+  SYSTEM_RELOAD: "system.reload",
 } as const;
 
 export type WsEventName = (typeof WS_EVENTS)[keyof typeof WS_EVENTS];
