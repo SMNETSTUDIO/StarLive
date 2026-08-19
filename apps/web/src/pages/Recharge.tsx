@@ -8,6 +8,7 @@ const PROVIDER_LABELS: Record<string, string> = {
   mock: "沙箱支付（联调）",
   epay: "易支付",
   alipay: "支付宝",
+  wechat: "微信支付",
   stripe: "Stripe",
 };
 
@@ -23,6 +24,7 @@ export default function Recharge() {
   const [provider, setProvider] = useState("");
   const [providers, setProviders] = useState<string[]>([]);
   const [payResult, setPayResult] = useState<{ type: string; payload: string } | null>(null);
+  const [qrDataUrl, setQrDataUrl] = useState("");
   const [error, setError] = useState("");
   const [syncMsg, setSyncMsg] = useState("");
   const [searchParams, setSearchParams] = useSearchParams();
@@ -58,6 +60,18 @@ export default function Recharge() {
       .catch((e) => setSyncMsg((e as Error).message));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // 扫码类支付（如微信 Native 的 weixin:// 链接）本地生成二维码图片
+  useEffect(() => {
+    if (payResult?.type !== "qrcode") {
+      setQrDataUrl("");
+      return;
+    }
+    import("qrcode")
+      .then((QR) => QR.toDataURL(payResult.payload, { width: 220, margin: 1 }))
+      .then(setQrDataUrl)
+      .catch(() => setQrDataUrl(""));
+  }, [payResult]);
 
   const onCreate = async () => {
     setError("");
@@ -135,9 +149,16 @@ export default function Recharge() {
                 <div dangerouslySetInnerHTML={{ __html: payResult.payload }} />
               </div>
             ) : payResult.type === "qrcode" ? (
-              <div>
-                <p>请扫码支付：</p>
-                <img src={payResult.payload} alt="支付二维码" />
+              <div style={{ textAlign: "center" }}>
+                <p>请使用手机扫码支付：</p>
+                {qrDataUrl ? (
+                  <img src={qrDataUrl} alt="支付二维码" width={220} height={220} />
+                ) : (
+                  <p className="small muted">二维码生成中…</p>
+                )}
+                <p className="small muted" style={{ marginTop: 8 }}>
+                  支付完成后请刷新本页确认到账
+                </p>
               </div>
             ) : (
               <div>

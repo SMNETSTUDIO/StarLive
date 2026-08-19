@@ -198,10 +198,14 @@ export class RoomsService {
   }
 
   async updateTags(roomId: string, userId: string, input: { category?: string; tags?: string[] }) {
-    await this.requireOwnership(roomId, userId);
+    const room = await this.requireOwnership(roomId, userId);
     if (input.category !== undefined) {
+      // 换分类时先从旧分类索引移除，避免残留
+      if (room.category && room.category !== input.category) {
+        await redis().srem(Keys.categoryRooms(room.category), roomId);
+      }
       await setRoomField(roomId, "category", input.category);
-      await redis().sadd(Keys.categoryRooms(input.category), roomId);
+      if (input.category) await redis().sadd(Keys.categoryRooms(input.category), roomId);
     }
     if (input.tags !== undefined) {
       await setRoomField(roomId, "tags", JSON.stringify(input.tags));
@@ -312,6 +316,54 @@ export class RoomsService {
       ? (await r.sismember(Keys.userFollowing(userId), targetUserId)) === 1
       : false;
     return { followers, following };
+  }
+
+  /** 公开用户主页：基本资料 + 关注数据 + 公开直播间列表 */
+  async publicProfile(viewerId: string | undefined, targetUserId: string) {
+    const { getUserById } = await import("../common/user-store");
+    const u = await getUserById(targetUserId);
+    if (!u || u.banned === "true") {
+      throw new BizException(ErrorCode.NOT_FOUND, "用户不存在", 404);
+    }
+    const r = redis();
+    const [{ followers, following }, followingCount, roomIds] = await Promise.all([
+      this.followStatus(viewerId, targetUserId),
+      r.scard(Keys.userFollowing(targetUserId)),
+      r.smembers(Keys.userRooms(targetUserId)),
+    ]);
+
+    const rooms: Array<Record<string, unknown>> = [];
+    for (const id of roomIds) {
+      const room = await getRoom(id);
+      if (!room || room.banned || !room.isPublic) continue;
+      const counts = await countViewers(id);
+      rooms.push({
+        id: room.id,
+        title: room.title,
+        announcement: room.announcement,
+        category: room.category,
+        tags: room.tags,
+        status: room.status,
+        createdAt: room.createdAt,
+        ...counts,
+      });
+    }
+    // 开播的排前面
+    rooms.sort((a, b) => Number(b.status === "active") - Number(a.status === "active"));
+
+    return {
+      user: {
+        id: u.id,
+        name: u.name ?? u.username,
+        username: u.username,
+        avatarUrl: u.avatarUrl,
+        createdAt: Number(u.createdAt ?? 0),
+      },
+      followers,
+      following,
+      followingCount,
+      rooms,
+    };
   }
 
   /** 我关注的主播列表（含直播间与开播状态） */

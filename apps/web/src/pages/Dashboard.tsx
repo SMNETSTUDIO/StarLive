@@ -1,15 +1,28 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import MiniBars from "../components/MiniBars";
+import Modal from "../components/Modal";
 import { get, post } from "../lib/api";
 
 interface RoomItem {
   id: string;
   title: string;
   status: string;
+  category?: string;
   viewerCount: number;
   createdAt: number;
 }
+
+interface RoomDetail {
+  id: string;
+  title: string;
+  announcement?: string;
+  isPublic: boolean;
+  category?: string;
+  tags?: string[];
+}
+
+const CATEGORY_OPTIONS = ["游戏", "音乐", "闲聊", "户外", "学习"];
 
 interface Earnings {
   days: number;
@@ -33,6 +46,13 @@ export default function Dashboard() {
   const [rooms, setRooms] = useState<RoomItem[]>([]);
   const [earnings, setEarnings] = useState<Earnings | null>(null);
   const [error, setError] = useState("");
+  // 房间设置编辑
+  const [editing, setEditing] = useState<RoomDetail | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editCategory, setEditCategory] = useState("");
+  const [editTags, setEditTags] = useState("");
+  const [editAnnouncement, setEditAnnouncement] = useState("");
+  const [saving, setSaving] = useState(false);
 
   const load = () => {
     get<RoomItem[]>("/room/list?mine=true")
@@ -46,6 +66,45 @@ export default function Dashboard() {
   useEffect(() => {
     load();
   }, []);
+
+  const openEdit = async (roomId: string) => {
+    try {
+      const r = await get<RoomDetail>(`/room/get?roomId=${roomId}`);
+      setEditing(r);
+      setEditTitle(r.title);
+      setEditCategory(r.category ?? "");
+      setEditTags((r.tags ?? []).join(" "));
+      setEditAnnouncement(r.announcement ?? "");
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  };
+
+  const onSaveEdit = async () => {
+    if (!editing || saving) return;
+    setSaving(true);
+    setError("");
+    try {
+      const tags = editTags
+        .split(/[\s,，]+/)
+        .map((t) => t.trim())
+        .filter(Boolean)
+        .slice(0, 5);
+      if (editTitle.trim() && editTitle.trim() !== editing.title) {
+        await post("/room/update", { roomId: editing.id, title: editTitle.trim() });
+      }
+      await post("/room/tags-update", { roomId: editing.id, category: editCategory, tags });
+      if (editAnnouncement !== (editing.announcement ?? "")) {
+        await post("/room/announcement-update", { roomId: editing.id, announcement: editAnnouncement });
+      }
+      setEditing(null);
+      load();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const onDelete = async (roomId: string) => {
     if (!confirm("确认删除该房间？")) return;
@@ -164,6 +223,9 @@ export default function Dashboard() {
                 <Link className="btn btn-sm" to={`/room/${r.id}`}>
                   进入
                 </Link>
+                <button className="btn btn-sm" onClick={() => openEdit(r.id)}>
+                  设置
+                </button>
                 <Link className="btn btn-sm" to={`/room/${r.id}/recordings`}>
                   录播
                 </Link>
@@ -174,6 +236,63 @@ export default function Dashboard() {
             </div>
           ))}
         </div>
+      )}
+
+      {editing && (
+        <Modal title="房间设置" width={480} onClose={() => setEditing(null)}>
+          <div className="field">
+            <label>房间标题</label>
+            <input
+              className="input"
+              value={editTitle}
+              maxLength={40}
+              onChange={(e) => setEditTitle(e.target.value)}
+            />
+          </div>
+          <div className="field">
+            <label>分类</label>
+            <div className="chips">
+              {CATEGORY_OPTIONS.map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  className={`chip ${editCategory === c ? "active" : ""}`}
+                  onClick={() => setEditCategory((cur) => (cur === c ? "" : c))}
+                >
+                  {c}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="field">
+            <label>标签（空格分隔，最多 5 个）</label>
+            <input
+              className="input"
+              value={editTags}
+              placeholder="例：怀旧 单机 硬核"
+              onChange={(e) => setEditTags(e.target.value)}
+            />
+          </div>
+          <div className="field">
+            <label>房间公告</label>
+            <textarea
+              className="input"
+              rows={2}
+              maxLength={120}
+              value={editAnnouncement}
+              onChange={(e) => setEditAnnouncement(e.target.value)}
+              placeholder="展示在直播间顶部的公告…"
+            />
+          </div>
+          <button
+            className="btn btn-primary"
+            style={{ width: "100%" }}
+            disabled={saving}
+            onClick={onSaveEdit}
+          >
+            {saving ? "保存中…" : "保存修改"}
+          </button>
+        </Modal>
       )}
     </div>
   );

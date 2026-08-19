@@ -38,7 +38,14 @@ export class ModerationService {
   }
 
   async listModerators(roomId: string) {
-    return redis().smembers(Keys.roomModerators(roomId));
+    const ids = await redis().smembers(Keys.roomModerators(roomId));
+    const { getUserById } = await import("../common/user-store");
+    const out: { id: string; name: string; avatarUrl?: string }[] = [];
+    for (const id of ids) {
+      const u = await getUserById(id);
+      out.push({ id, name: u ? (u.name ?? u.username) : id, avatarUrl: u?.avatarUrl });
+    }
+    return out;
   }
 
   async mute(
@@ -81,9 +88,18 @@ export class ModerationService {
   async mutedUsers(roomId: string) {
     const raw = await redis().hgetall(`${Keys.room(roomId)}:muted:list`);
     const now = Date.now();
-    return Object.entries(raw)
-      .filter(([, expiresAt]) => expiresAt === "0" || Number(expiresAt) > now)
-      .map(([identity, expiresAt]) => ({ identity, expiresAt: expiresAt === "0" ? 0 : Number(expiresAt) }));
+    const { getUserById } = await import("../common/user-store");
+    const out: { identity: string; name: string; expiresAt: number }[] = [];
+    for (const [identity, expiresAt] of Object.entries(raw)) {
+      if (expiresAt !== "0" && Number(expiresAt) <= now) continue;
+      const u = identity.startsWith("u_") ? await getUserById(identity) : null;
+      out.push({
+        identity,
+        name: u ? (u.name ?? u.username) : `游客_${identity.slice(-4)}`,
+        expiresAt: expiresAt === "0" ? 0 : Number(expiresAt),
+      });
+    }
+    return out;
   }
 
   async moderationLog(roomId: string, limit = 50) {

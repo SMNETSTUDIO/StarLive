@@ -1,21 +1,38 @@
 import { useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import type { DanmakuMessage } from "@starlive/shared";
 
 const EMOJIS = [
   "😀", "😂", "🤣", "😍", "😎", "🥳", "😭", "🤔",
   "👍", "👏", "🙌", "💪", "🔥", "❤️", "💖", "✨",
-  "🎉", "🎊", "🚀", "⭐", "🌹", "🧧", "😱", "666",
+  "🎉", "🎊", "🚀", "⭐", "🧧", "🌹", "😱", "666",
 ];
+
+function fmtCountdown(until: number): string {
+  const s = Math.max(0, Math.ceil((until - Date.now()) / 1000));
+  if (s >= 3600) return `${Math.ceil(s / 3600)} 小时`;
+  if (s >= 60) return `${Math.ceil(s / 60)} 分钟`;
+  return `${s} 秒`;
+}
 
 export default function ChatPanel({
   messages,
   onSend,
+  canModerate = false,
+  onMute,
+  mutedUntil = 0,
 }: {
   messages: DanmakuMessage[];
   onSend: (content: string) => void;
+  /** 房主/房管：在消息上展示禁言按钮 */
+  canModerate?: boolean;
+  onMute?: (m: DanmakuMessage) => void;
+  /** 我被禁言到（ms 时间戳；Infinity = 永久；0 = 未禁言） */
+  mutedUntil?: number;
 }) {
   const [text, setText] = useState("");
   const [showEmoji, setShowEmoji] = useState(false);
+  const [, forceTick] = useState(0);
   const listRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -23,8 +40,16 @@ export default function ChatPanel({
     if (el) el.scrollTop = el.scrollHeight;
   }, [messages.length]);
 
+  // 禁言倒计时每秒刷新
+  const isMuted = mutedUntil === Infinity || mutedUntil > Date.now();
+  useEffect(() => {
+    if (!isMuted || mutedUntil === Infinity) return;
+    const t = setInterval(() => forceTick((v) => v + 1), 1000);
+    return () => clearInterval(t);
+  }, [isMuted, mutedUntil]);
+
   const submit = () => {
-    if (!text.trim()) return;
+    if (!text.trim() || isMuted) return;
     onSend(text.trim());
     setText("");
     setShowEmoji(false);
@@ -44,10 +69,26 @@ export default function ChatPanel({
         )}
         {messages.map((m) => (
           <div className="chat-msg" key={m.id}>
-            <span className="nick" style={{ color: m.color }}>
-              {m.name}
-            </span>
+            {m.userId ? (
+              <Link className="nick" style={{ color: m.color }} to={`/user/${m.userId}`}>
+                {m.name}
+              </Link>
+            ) : (
+              <span className="nick" style={{ color: m.color }}>
+                {m.name}
+              </span>
+            )}
             ：{m.content}
+            {canModerate && onMute && (m.userId || m.guestId) && (
+              <button
+                className="chat-mute-btn"
+                title={`禁言 ${m.name}`}
+                aria-label={`禁言 ${m.name}`}
+                onClick={() => onMute(m)}
+              >
+                🔇
+              </button>
+            )}
           </div>
         ))}
       </div>
@@ -60,34 +101,42 @@ export default function ChatPanel({
           ))}
         </div>
       )}
-      <div className="flex" style={{ gap: 8 }}>
-        <button
-          className={`btn btn-sm btn-ghost${showEmoji ? " emoji-active" : ""}`}
-          style={{ padding: "6px 10px", fontSize: 17 }}
-          title="表情"
-          aria-label="表情面板"
-          aria-expanded={showEmoji}
-          onClick={() => setShowEmoji((v) => !v)}
-        >
-          😀
-        </button>
-        <div style={{ flex: 1, position: "relative" }}>
-          <input
-            className="input"
-            placeholder="发条弹幕…"
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && submit()}
-            maxLength={30}
-          />
-          {text.length >= 20 && (
-            <span className="chat-counter">{text.length}/30</span>
-          )}
+      {isMuted ? (
+        <div className="alert" style={{ margin: 0, textAlign: "center" }}>
+          🔇 你已被禁言
+          {mutedUntil !== Infinity && <>，{fmtCountdown(mutedUntil)}后恢复</>}
         </div>
-        <button className="btn btn-primary" onClick={submit}>
-          发送
-        </button>
-      </div>
+      ) : (
+        <div className="flex" style={{ gap: 8 }}>
+          <button
+            className={`btn btn-sm btn-ghost${showEmoji ? " emoji-active" : ""}`}
+            style={{ padding: "6px 10px", fontSize: 17 }}
+            title="表情"
+            aria-label="表情面板"
+            aria-expanded={showEmoji}
+            onClick={() => setShowEmoji((v) => !v)}
+          >
+            😀
+          </button>
+          <div style={{ flex: 1, position: "relative" }}>
+            <input
+              className="input"
+              placeholder="发条弹幕…"
+              aria-label="弹幕内容"
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && submit()}
+              maxLength={30}
+            />
+            {text.length >= 20 && (
+              <span className="chat-counter">{text.length}/30</span>
+            )}
+          </div>
+          <button className="btn btn-primary" onClick={submit}>
+            发送
+          </button>
+        </div>
+      )}
     </div>
   );
 }

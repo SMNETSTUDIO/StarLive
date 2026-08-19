@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import Pagination, { pageCountOf, paginate } from "../../components/Pagination";
 import { get, post } from "../../lib/api";
 import { downloadCsv } from "../../lib/csv";
 
@@ -18,11 +19,14 @@ const STATUS_TABS = [
   { label: "⏳ 待支付", value: "pending" },
 ];
 
+const PAGE_SIZE = 20;
+
 export default function AdminOrders() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [status, setStatus] = useState("");
   const [keyword, setKeyword] = useState("");
   const [error, setError] = useState("");
+  const [page, setPage] = useState(1);
 
   const load = () => get<Order[]>("/admin/orders").then(setOrders).catch(() => undefined);
   useEffect(() => {
@@ -47,6 +51,8 @@ export default function AdminOrders() {
     .sort((a, b) => b.createdAt - a.createdAt);
 
   const paidTotal = shown.filter((o) => o.status === "paid").reduce((s, o) => s + o.amount, 0);
+  const pageCount = pageCountOf(shown.length, PAGE_SIZE);
+  const paged = paginate(shown, Math.min(page, pageCount), PAGE_SIZE);
 
   return (
     <div>
@@ -57,7 +63,10 @@ export default function AdminOrders() {
           style={{ width: 220 }}
           placeholder="🔍 搜索订单号 / 用户 ID…"
           value={keyword}
-          onChange={(e) => setKeyword(e.target.value)}
+          onChange={(e) => {
+            setKeyword(e.target.value);
+            setPage(1);
+          }}
         />
       </div>
       <div className="flex between wrap" style={{ marginBottom: 16 }}>
@@ -66,7 +75,10 @@ export default function AdminOrders() {
             <button
               key={s.value}
               className={`chip${status === s.value ? " active" : ""}`}
-              onClick={() => setStatus(s.value)}
+              onClick={() => {
+                setStatus(s.value);
+                setPage(1);
+              }}
             >
               {s.label}
             </button>
@@ -100,6 +112,7 @@ export default function AdminOrders() {
         </div>
       </div>
       {error && <div className="alert alert-error">{error}</div>}
+      <div className="table-wrap">
       <table className="table">
         <thead>
           <tr>
@@ -121,7 +134,7 @@ export default function AdminOrders() {
               </td>
             </tr>
           )}
-          {shown.map((o) => (
+          {paged.map((o) => (
             <tr key={o.id}>
               <td className="muted small">{o.id}</td>
               <td className="muted small">{o.userId}</td>
@@ -149,6 +162,13 @@ export default function AdminOrders() {
           ))}
         </tbody>
       </table>
+      </div>
+      <Pagination
+        page={Math.min(page, pageCount)}
+        pageCount={pageCount}
+        total={shown.length}
+        onChange={setPage}
+      />
     </div>
   );
 }

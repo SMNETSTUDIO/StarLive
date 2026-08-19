@@ -1,7 +1,10 @@
 import { useEffect, useState } from "react";
 import Modal from "../../components/Modal";
+import Pagination, { pageCountOf, paginate } from "../../components/Pagination";
 import { get, post } from "../../lib/api";
 import { downloadCsv } from "../../lib/csv";
+
+const PAGE_SIZE = 20;
 
 interface AdminUser {
   id: string;
@@ -244,6 +247,7 @@ export default function AdminUsers() {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [keyword, setKeyword] = useState("");
   const [editing, setEditing] = useState<AdminUser | null>(null);
+  const [page, setPage] = useState(1);
 
   const load = () => get<AdminUser[]>("/admin/users").then(setUsers).catch(() => undefined);
   useEffect(() => {
@@ -264,6 +268,8 @@ export default function AdminUsers() {
           u.email?.toLowerCase().includes(kw),
       )
     : users;
+  const pageCount = pageCountOf(shown.length, PAGE_SIZE);
+  const paged = paginate(shown, Math.min(page, pageCount), PAGE_SIZE);
 
   return (
     <div>
@@ -275,7 +281,10 @@ export default function AdminUsers() {
             style={{ width: 220 }}
             placeholder="🔍 搜索用户名 / 邮箱…"
             value={keyword}
-            onChange={(e) => setKeyword(e.target.value)}
+            onChange={(e) => {
+              setKeyword(e.target.value);
+              setPage(1);
+            }}
           />
           <button
             className="btn btn-sm"
@@ -301,6 +310,7 @@ export default function AdminUsers() {
           </button>
         </div>
       </div>
+      <div className="table-wrap">
       <table className="table">
         <thead>
           <tr>
@@ -320,7 +330,7 @@ export default function AdminUsers() {
               </td>
             </tr>
           )}
-          {shown.map((u) => (
+          {paged.map((u) => (
             <tr key={u.id}>
               <td>
                 <div className="flex" style={{ gap: 10 }}>
@@ -361,6 +371,13 @@ export default function AdminUsers() {
           ))}
         </tbody>
       </table>
+      </div>
+      <Pagination
+        page={Math.min(page, pageCount)}
+        pageCount={pageCount}
+        total={shown.length}
+        onChange={setPage}
+      />
       {editing && (
         <EditUserModal user={editing} onClose={() => setEditing(null)} onSaved={load} />
       )}

@@ -11,6 +11,8 @@ function envInt(key: string, def: number): number {
 
 export const config = {
   port: envInt("PORT", 3000),
+  // 监听地址：默认全接口（容器/公网部署），仅本机访问可设 HOST=127.0.0.1
+  host: env("HOST", "0.0.0.0"),
   appBaseUrl: env("APP_BASE_URL", "http://localhost:3000"),
 
   // 前端构建产物目录（留空则默认 apps/web/dist）
@@ -51,6 +53,14 @@ export const config = {
   alipayPrivateKey: env("ALIPAY_PRIVATE_KEY", ""),
   alipayPublicKey: env("ALIPAY_PUBLIC_KEY", ""),
   alipayGateway: env("ALIPAY_GATEWAY", "https://openapi.alipay.com/gateway.do"),
+
+  wechatAppId: env("WECHAT_APP_ID", ""),
+  wechatMchId: env("WECHAT_MCH_ID", ""),
+  // APIv3 密钥（回调解密）
+  wechatApiV3Key: env("WECHAT_API_KEY", ""),
+  // 商户 API 证书序列号 + 商户 API 私钥（请求签名）
+  wechatSerialNo: env("WECHAT_SERIAL_NO", ""),
+  wechatPrivateKey: env("WECHAT_PRIVATE_KEY", ""),
 
   stripeSecretKey: env("STRIPE_SECRET_KEY", ""),
   stripeWebhookSecret: env("STRIPE_WEBHOOK_SECRET", ""),

@@ -69,10 +69,10 @@ async function bootstrap(): Promise<void> {
     });
   }
 
-  await app.listen(config.port);
+  await app.listen(config.port, config.host);
   // eslint-disable-next-line no-console
   console.log(
-    `StarLive listening on http://localhost:${config.port}` +
+    `StarLive listening on http://${config.host}:${config.port}` +
       (hasWeb ? " (web + api)" : "/api (web dist not found, api only)"),
   );
 }

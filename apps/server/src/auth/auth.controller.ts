@@ -11,6 +11,7 @@ import {
 import type { Request, Response } from "express";
 import { config } from "../config/config";
 import { AuthGuard, OptionalAuthGuard, type AuthedRequest } from "../common/guards";
+import { assertRateLimit, clientIp } from "../common/rate-limit";
 import { AuthService } from "./auth.service";
 
 function setSessionCookie(res: Response, token: string): void {
@@ -44,9 +45,11 @@ export class AuthController {
 
   @Post("register")
   async register(
+    @Req() req: Request,
     @Body() body: { username: string; password: string; email?: string },
     @Res({ passthrough: true }) res: Response,
   ) {
+    await assertRateLimit(`register:${clientIp(req)}`, 5, 300, "注册太频繁，请稍后再试");
     const created = await this.auth.register(body);
     const { token } = await this.auth.login({
       account: created.username,
@@ -58,9 +61,11 @@ export class AuthController {
 
   @Post("login")
   async login(
+    @Req() req: Request,
     @Body() body: { account: string; password: string },
     @Res({ passthrough: true }) res: Response,
   ) {
+    await assertRateLimit(`login:${clientIp(req)}`, 10, 60, "登录尝试太频繁，请稍后再试");
     const { user, token } = await this.auth.login(body);
     setSessionCookie(res, token);
     return { user };

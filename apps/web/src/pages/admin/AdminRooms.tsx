@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import Pagination, { pageCountOf, paginate } from "../../components/Pagination";
 import Modal from "../../components/Modal";
 import { get, post } from "../../lib/api";
 
@@ -81,10 +82,13 @@ function EditRoomModal({ room, onClose, onSaved }: { room: AdminRoom; onClose: (
   );
 }
 
+const PAGE_SIZE = 20;
+
 export default function AdminRooms() {
   const [rooms, setRooms] = useState<AdminRoom[]>([]);
   const [keyword, setKeyword] = useState("");
   const [editing, setEditing] = useState<AdminRoom | null>(null);
+  const [page, setPage] = useState(1);
 
   const load = () => get<AdminRoom[]>("/admin/rooms").then(setRooms).catch(() => undefined);
   useEffect(() => {
@@ -111,6 +115,8 @@ export default function AdminRooms() {
           r.ownerId?.toLowerCase().includes(kw),
       )
     : rooms;
+  const pageCount = pageCountOf(shown.length, PAGE_SIZE);
+  const paged = paginate(shown, Math.min(page, pageCount), PAGE_SIZE);
 
   return (
     <div>
@@ -121,9 +127,13 @@ export default function AdminRooms() {
           style={{ width: 220 }}
           placeholder="🔍 搜索标题 / 分类 / 房主…"
           value={keyword}
-          onChange={(e) => setKeyword(e.target.value)}
+          onChange={(e) => {
+            setKeyword(e.target.value);
+            setPage(1);
+          }}
         />
       </div>
+      <div className="table-wrap">
       <table className="table">
         <thead>
           <tr>
@@ -143,7 +153,7 @@ export default function AdminRooms() {
               </td>
             </tr>
           )}
-          {shown.map((r) => (
+          {paged.map((r) => (
             <tr key={r.id}>
               <td>
                 {r.title}
@@ -187,6 +197,13 @@ export default function AdminRooms() {
           ))}
         </tbody>
       </table>
+      </div>
+      <Pagination
+        page={Math.min(page, pageCount)}
+        pageCount={pageCount}
+        total={shown.length}
+        onChange={setPage}
+      />
       {editing && (
         <EditRoomModal room={editing} onClose={() => setEditing(null)} onSaved={load} />
       )}

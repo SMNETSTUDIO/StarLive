@@ -24,13 +24,19 @@ const CATEGORIES = [
 export default function LiveList() {
   const [rooms, setRooms] = useState<RoomItem[]>([]);
   const [category, setCategory] = useState("");
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let alive = true;
+    setLoading(true);
     const load = () => {
       get<RoomItem[]>(`/room/list${category ? `?category=${encodeURIComponent(category)}` : ""}`)
-        .then((r) => alive && setRooms(r.filter((x) => x.status === "active")))
-        .catch(() => undefined);
+        .then((r) => {
+          if (!alive) return;
+          setRooms(r.filter((x) => x.status === "active"));
+          setLoading(false);
+        })
+        .catch(() => alive && setLoading(false));
     };
     load();
     const timer = setInterval(load, 20000);
@@ -59,7 +65,17 @@ export default function LiveList() {
           ))}
         </div>
       </div>
-      {rooms.length === 0 ? (
+      {loading && rooms.length === 0 ? (
+        <div className="grid grid-3" aria-hidden>
+          {[0, 1, 2].map((i) => (
+            <div className="card" key={i}>
+              <span className="skeleton skeleton-card" style={{ height: 140 }} />
+              <span className="skeleton skeleton-line" style={{ width: "60%", marginTop: 14 }} />
+              <span className="skeleton skeleton-line" style={{ width: "35%", marginTop: 8 }} />
+            </div>
+          ))}
+        </div>
+      ) : rooms.length === 0 ? (
         <div className="empty" style={{ padding: "80px 0" }}>
           <div style={{ fontSize: 44, marginBottom: 12 }}>📺</div>
           <p style={{ margin: "0 0 18px" }}>暂时没有正在进行的直播</p>

@@ -1,9 +1,18 @@
+import { useState } from "react";
 import { NavLink, Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { applyTheme, getTheme, type Theme } from "../lib/theme";
 
 export default function TopBar() {
   const { user, isAdmin, logout } = useAuth();
   const navigate = useNavigate();
+  const [theme, setTheme] = useState<Theme>(getTheme);
+
+  const toggleTheme = () => {
+    const next: Theme = theme === "dark" ? "light" : "dark";
+    applyTheme(next);
+    setTheme(next);
+  };
 
   const onLogout = async () => {
     await logout();
@@ -29,6 +38,14 @@ export default function TopBar() {
           {isAdmin && <NavLink to="/admin">管理后台</NavLink>}
         </nav>
         <div className="flex">
+          <button
+            className="theme-toggle"
+            onClick={toggleTheme}
+            title={theme === "dark" ? "切换到浅色模式" : "切换到深色模式"}
+            aria-label={theme === "dark" ? "切换到浅色模式" : "切换到深色模式"}
+          >
+            {theme === "dark" ? "☀️" : "🌙"}
+          </button>
           {user ? (
             <>
               <Link to="/profile" className="flex" style={{ gap: 8, color: "inherit" }} title="个人中心">

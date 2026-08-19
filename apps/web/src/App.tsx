@@ -20,6 +20,7 @@ const Room = lazy(() => import("./pages/Room"));
 const Recordings = lazy(() => import("./pages/Recordings"));
 const DanmakuPopout = lazy(() => import("./pages/DanmakuPopout"));
 const Recharge = lazy(() => import("./pages/Recharge"));
+const UserProfile = lazy(() => import("./pages/UserProfile"));
 const Withdrawal = lazy(() => import("./pages/Withdrawal"));
 const AdminLayout = lazy(() => import("./pages/admin/AdminLayout"));
 const AdminOverview = lazy(() => import("./pages/admin/AdminOverview"));
@@ -92,6 +93,7 @@ function Shell() {
           <Route path="/room/:roomId" element={<Room />} />
           <Route path="/room/:roomId/recordings" element={<Recordings />} />
           <Route path="/room/:roomId/danmaku-popout" element={<DanmakuPopout />} />
+          <Route path="/user/:userId" element={<UserProfile />} />
           <Route path="/recharge" element={<Recharge />} />
           <Route path="/withdrawal" element={<Withdrawal />} />
           <Route path="/banned" element={<Banned />} />

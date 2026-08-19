@@ -10,6 +10,7 @@ import Modal from "../components/Modal";
 import Player from "../components/Player";
 import RankPanel, { type RewardRecord } from "../components/RankPanel";
 import RedpacketPanel, { type RedpacketItem } from "../components/RedpacketPanel";
+import RoomModPanel from "../components/RoomModPanel";
 import { useAuth } from "../context/AuthContext";
 import { ApiError, get, post } from "../lib/api";
 import { giftEmoji } from "../lib/gift-emoji";
@@ -56,9 +57,14 @@ export default function Room() {
   const [reportReason, setReportReason] = useState(REPORT_REASONS[0]);
   const [reportDetail, setReportDetail] = useState("");
   const [reportState, setReportState] = useState<"idle" | "sending" | "done">("idle");
+  const [modPanelOpen, setModPanelOpen] = useState(false);
+  const [moderatorIds, setModeratorIds] = useState<string[]>([]);
+  const [muteTarget, setMuteTarget] = useState<DanmakuMessage | null>(null);
+  const [mutedUntil, setMutedUntil] = useState(0);
   const messagesRef = useRef<DanmakuMessage[]>([]);
 
   const isOwner = user?.id === room?.ownerId;
+  const canModerate = isOwner || (!!user && moderatorIds.includes(user.id));
   // 按当前访问域名生成推流地址（MediaMTX RTMP 端口 1935）
   const rtmpUrl = `rtmp://${window.location.hostname}:1935`;
 
@@ -75,7 +81,11 @@ export default function Room() {
         setRoom(r);
         setViewers(r.viewerCount ?? 0);
         setNeedPassword(false);
-        if (pwd) sessionStorage.setItem(`room_pwd_${roomId}`, pwd);
+        if (pwd) {
+          sessionStorage.setItem(`room_pwd_${roomId}`, pwd);
+          // 私密房间：REST 校验通过后携带密码重新加入 WS 房间
+          getSocket().emit("join_room", { roomId, password: pwd });
+        }
       } catch (e) {
         if ((e as ApiError).code === 3001) {
           setNeedPassword(true);
@@ -101,6 +111,12 @@ export default function Room() {
 
   const loadRewards = useCallback(() => {
     get<RewardRecord[]>(`/gift/room-rewards?roomId=${roomId}`).then(setRewards).catch(() => undefined);
+  }, [roomId]);
+
+  const loadModerators = useCallback(() => {
+    get<{ id: string }[]>(`/room-moderators-list?roomId=${roomId}`)
+      .then((mods) => setModeratorIds(mods.map((m) => m.id)))
+      .catch(() => undefined);
   }, [roomId]);
 
   // 关注状态（依赖房主 ID，房间加载后触发）
@@ -137,6 +153,7 @@ export default function Room() {
     void loadRedpackets();
     void loadLottery();
     void loadRewards();
+    void loadModerators();
 
     get<DanmakuMessage[]>(`/danmaku/recent?roomId=${roomId}`)
       .then((msgs) => {
@@ -146,7 +163,7 @@ export default function Room() {
       .catch(() => undefined);
 
     const socket = getSocket();
-    socket.emit("join_room", { roomId });
+    socket.emit("join_room", { roomId, password: saved });
 
     const onDanmaku = (m: DanmakuMessage) => appendMessage(m);
     const onGift = (g: GiftMessage) => {
@@ -191,6 +208,14 @@ export default function Room() {
     const onRedpacketCreated = () => loadRedpackets();
     const onRedpacketClaimed = () => loadRedpackets();
     const onLotteryEvent = () => loadLottery();
+    // 被禁言反馈：命中当前身份时禁用聊天输入并倒计时
+    const onMute = (p: { userId?: string; guestId?: string; durationSec?: number }) => {
+      const me = user?.id;
+      const guest = getGuestId();
+      if ((p.userId && p.userId === me) || (p.guestId && p.guestId === guest)) {
+        setMutedUntil(p.durationSec && p.durationSec > 0 ? Date.now() + p.durationSec * 1000 : Infinity);
+      }
+    };
 
     socket.on("danmaku", onDanmaku);
     socket.on("gift", onGift);
@@ -201,6 +226,7 @@ export default function Room() {
     socket.on("lottery.started", onLotteryEvent);
     socket.on("lottery.joined", onLotteryEvent);
     socket.on("lottery.drawn", onLotteryEvent);
+    socket.on("mute", onMute);
 
     const heartbeat = setInterval(() => {
       post(`/room/${roomId}/heartbeat`, { guestId: getGuestId() }).catch(() => undefined);
@@ -218,9 +244,10 @@ export default function Room() {
       socket.off("lottery.started", onLotteryEvent);
       socket.off("lottery.joined", onLotteryEvent);
       socket.off("lottery.drawn", onLotteryEvent);
+      socket.off("mute", onMute);
       clearInterval(heartbeat);
     };
-  }, [roomId, appendMessage, loadRoom, loadGifts, loadRedpackets, loadLottery]);
+  }, [roomId, appendMessage, loadRoom, loadGifts, loadRedpackets, loadLottery, loadModerators, user?.id]);
 
   const onSendDanmaku = async (content: string) => {
     try {
@@ -311,6 +338,24 @@ export default function Room() {
     }
   };
 
+  // 房管禁言：从聊天消息发起，选择时长后提交
+  const onMuteUser = async (durationSec: number) => {
+    if (!muteTarget) return;
+    try {
+      await post("/room-user-mute", {
+        roomId,
+        userId: muteTarget.userId,
+        guestId: muteTarget.guestId,
+        name: muteTarget.name,
+        durationSec: durationSec > 0 ? durationSec : undefined,
+      });
+      setMuteTarget(null);
+    } catch (e) {
+      setError((e as Error).message);
+      setTimeout(() => setError(""), 3000);
+    }
+  };
+
   const onCreateLottery = async (title: string, winnerCount: number, durationSec: number) => {
     try {
       await post("/lottery/create", { roomId, title, winnerCount, durationSec });
@@ -357,7 +402,26 @@ export default function Room() {
   }
 
   if (!room) {
-    return <div className="empty container">加载中…{error}</div>;
+    if (error) {
+      return (
+        <div className="empty container" style={{ padding: "100px 0" }}>
+          <div style={{ fontSize: 44, marginBottom: 12 }}>📡</div>
+          <p style={{ margin: "0 0 18px" }}>{error}</p>
+          <Link className="btn" to="/live-list">
+            返回直播广场
+          </Link>
+        </div>
+      );
+    }
+    return (
+      <div className="container container-wide" aria-hidden>
+        <span className="skeleton skeleton-line" style={{ width: 240, height: 24, marginBottom: 16 }} />
+        <div className="room-grid">
+          <span className="skeleton" style={{ aspectRatio: "16 / 9", width: "100%", borderRadius: "var(--radius)" }} />
+          <span className="skeleton" style={{ height: 420, borderRadius: "var(--radius)" }} />
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -387,6 +451,9 @@ export default function Room() {
           </span>
         </div>
         <div className="flex">
+          <Link className="btn btn-sm btn-ghost" to={`/user/${room.ownerId}`} title="主播主页">
+            👤 主播
+          </Link>
           {!isOwner && follow && (
             <button
               className={`btn btn-sm ${follow.following ? "" : "btn-primary"}`}
@@ -411,6 +478,11 @@ export default function Room() {
           <Link className="btn btn-sm" to={`/room/${roomId}/danmaku-popout`} target="_blank">
             弹幕窗口
           </Link>
+          {canModerate && (
+            <button className="btn btn-sm" onClick={() => setModPanelOpen(true)}>
+              🛡️ 管理
+            </button>
+          )}
           {isOwner && <Link className="btn btn-sm" to={`/room/${roomId}/recordings`}>录播</Link>}
           {!isOwner && (
             <button className="btn btn-sm btn-ghost" onClick={openReport} title="举报该直播间">
@@ -476,7 +548,17 @@ export default function Room() {
         </div>
 
         <div className="flex-col">
-          <ChatPanel messages={messages} onSend={onSendDanmaku} />
+          <ChatPanel
+            messages={messages}
+            onSend={onSendDanmaku}
+            canModerate={canModerate}
+            onMute={(m) => {
+              // 不能禁言自己与房主
+              if (m.userId === user?.id || m.userId === room.ownerId) return;
+              setMuteTarget(m);
+            }}
+            mutedUntil={mutedUntil}
+          />
           <GiftPanel gifts={gifts} onSend={onSendGift} />
           <RankPanel rewards={rewards} />
           <RedpacketPanel
@@ -495,6 +577,41 @@ export default function Room() {
           />
         </div>
       </div>
+
+      {modPanelOpen && (
+        <RoomModPanel
+          roomId={roomId}
+          isOwner={isOwner}
+          ownerId={room.ownerId}
+          onlineUsers={onlineUsers}
+          onClose={() => {
+            setModPanelOpen(false);
+            loadModerators();
+          }}
+        />
+      )}
+
+      {muteTarget && (
+        <Modal title={`禁言 ${muteTarget.name}`} onClose={() => setMuteTarget(null)}>
+          <p className="muted small" style={{ margin: "0 0 12px" }}>
+            禁言后该用户将无法在本房间发送弹幕
+          </p>
+          <div className="chips">
+            {(
+              [
+                ["10 分钟", 600],
+                ["1 小时", 3600],
+                ["24 小时", 86400],
+                ["永久", 0],
+              ] as const
+            ).map(([label, sec]) => (
+              <button key={label} type="button" className="chip" onClick={() => onMuteUser(sec)}>
+                {label}
+              </button>
+            ))}
+          </div>
+        </Modal>
+      )}
 
       {reportOpen && (
         <Modal title="举报直播间" onClose={() => setReportOpen(false)}>

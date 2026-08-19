@@ -13,6 +13,7 @@ import {
 } from "@nestjs/common";
 import type { Request, Response } from "express";
 import { AuthGuard, type AuthedRequest } from "../common/guards";
+import { assertRateLimit } from "../common/rate-limit";
 import { ERR_CALLBACK_IGNORED } from "../payment/payment.service";
 import { WalletService } from "./wallet.service";
 
@@ -55,10 +56,11 @@ export class WalletController {
 
   @Post("payment/create-order")
   @UseGuards(AuthGuard)
-  createOrder(
+  async createOrder(
     @Req() req: AuthedRequest,
     @Body() body: { coins: number; provider: string },
   ) {
+    await assertRateLimit(`create-order:${req.user!.sub}`, 10, 60, "下单太频繁，请稍后再试");
     return this.wallet.createOrder(req.user!.sub, body.coins, body.provider ?? "epay");
   }
 

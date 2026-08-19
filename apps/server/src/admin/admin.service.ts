@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common";
 import * as bcrypt from "bcryptjs";
 import { ErrorCode, Keys } from "@starlive/shared";
 import { writeAdminAuditLog } from "../common/audit";
+import { invalidateCache } from "../common/cache";
 import { BizException } from "../common/errors";
 import { DEFAULT_ADMIN_PERMISSIONS } from "../common/permissions";
 import { redis, redisPipeline } from "../common/redis";
@@ -379,12 +380,14 @@ export class AdminService {
   async addSensitiveWord(word: string, adminId: string) {
     if (!word) return { ok: true };
     await redis().sadd(Keys.adminSensitiveWords, word);
+    invalidateCache("sensitive_words");
     await writeAdminAuditLog("sensitive_word_add", adminId, { word });
     return { ok: true };
   }
 
   async removeSensitiveWord(word: string, adminId: string) {
     await redis().srem(Keys.adminSensitiveWords, word);
+    invalidateCache("sensitive_words");
     await writeAdminAuditLog("sensitive_word_remove", adminId, { word });
     return { ok: true };
   }
