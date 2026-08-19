@@ -1,7 +1,8 @@
 import type { Room, RoomStatus } from "@starlive/shared";
 import { Keys } from "@starlive/shared";
+import { invalidateCache } from "./cache";
 import { EVT, publishEvent } from "./event-bus";
-import { redis } from "./redis";
+import { redis, redisPipeline } from "./redis";
 
 export const VIEWER_TTL_MS = 20_000;
 
@@ -50,6 +51,8 @@ export async function setRoomStatus(
   status: RoomStatus,
 ): Promise<void> {
   await redis().hset(Keys.room(roomId), "status", status);
+  // 开播/下播立即反映到列表（绕过列表 3s 缓存）
+  invalidateCache("rooms:list:");
   publishEvent(EVT.ROOM_STATUS, { roomId, status, ts: Date.now() });
 }
 
@@ -61,33 +64,61 @@ export async function bindStreamKey(streamKey: string, roomId: string): Promise<
   await redis().set(`stream:key:${streamKey}`, roomId);
 }
 
-export async function countViewers(roomId: string): Promise<{
+export interface ViewerCounts {
   viewerCount: number;
   registeredCount: number;
   guestCount: number;
-}> {
-  const r = redis();
+}
+
+/** 单房间在线人数：4 条命令合并为一次 pipeline 往返 */
+export async function countViewers(roomId: string): Promise<ViewerCounts> {
+  const map = await countViewersBatch([roomId]);
+  return map.get(roomId)!;
+}
+
+/** 批量在线人数：N 个房间共 4N 条命令，仍只有一次往返（远程 Redis 关键优化） */
+export async function countViewersBatch(roomIds: string[]): Promise<Map<string, ViewerCounts>> {
+  const out = new Map<string, ViewerCounts>();
+  if (roomIds.length === 0) return out;
   const now = Date.now();
   const min = now - VIEWER_TTL_MS;
-  await r.zremrangebyscore(Keys.roomViewersUser(roomId), "-inf", min);
-  await r.zremrangebyscore(Keys.roomViewersGuest(roomId), "-inf", min);
-  const u = await r.zcount(Keys.roomViewersUser(roomId), min, "+inf");
-  const g = await r.zcount(Keys.roomViewersGuest(roomId), min, "+inf");
-  return { viewerCount: u + g, registeredCount: u, guestCount: g };
+  const res = await redisPipeline<number>((p) => {
+    for (const id of roomIds) {
+      p.zremrangebyscore(Keys.roomViewersUser(id), "-inf", min);
+      p.zremrangebyscore(Keys.roomViewersGuest(id), "-inf", min);
+      p.zcount(Keys.roomViewersUser(id), min, "+inf");
+      p.zcount(Keys.roomViewersGuest(id), min, "+inf");
+    }
+  });
+  roomIds.forEach((id, i) => {
+    const u = res[i * 4 + 2] ?? 0;
+    const g = res[i * 4 + 3] ?? 0;
+    out.set(id, { viewerCount: u + g, registeredCount: u, guestCount: g });
+  });
+  return out;
 }
 
 export async function heartbeatViewer(
   roomId: string,
   identity: { userId?: string; guestId?: string },
-): Promise<{ viewerCount: number; registeredCount: number; guestCount: number }> {
-  const r = redis();
+): Promise<ViewerCounts> {
   const now = Date.now();
+  const min = now - VIEWER_TTL_MS;
   const key = identity.userId
     ? Keys.roomViewersUser(roomId)
     : Keys.roomViewersGuest(roomId);
   const member = identity.userId ?? identity.guestId ?? "unknown";
-  await r.zadd(key, now, member);
-  const counts = await countViewers(roomId);
+  // 写入 + 清理 + 统计合并为一次往返
+  const res = await redisPipeline<number>((p) => {
+    p.zadd(key, now, member);
+    p.zremrangebyscore(Keys.roomViewersUser(roomId), "-inf", min);
+    p.zremrangebyscore(Keys.roomViewersGuest(roomId), "-inf", min);
+    p.zcount(Keys.roomViewersUser(roomId), min, "+inf");
+    p.zcount(Keys.roomViewersGuest(roomId), min, "+inf");
+  });
+  const u = res[3] ?? 0;
+  const g = res[4] ?? 0;
+  const counts = { viewerCount: u + g, registeredCount: u, guestCount: g };
   publishEvent(EVT.PRESENCE, { roomId, ...counts });
   return counts;
 }

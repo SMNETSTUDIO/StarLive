@@ -9,6 +9,10 @@ export function redis(): Redis {
       maxRetriesPerRequest: 3,
       lazyConnect: false,
       retryStrategy: (times) => Math.min(times * 500, 5000),
+      // 同一事件循环内的并发命令自动合并为 pipeline 发送：
+      // 远程 Redis（如 Upstash）下单命令往返上百毫秒，合并后吞吐量大幅提升
+      enableAutoPipelining: true,
+      keepAlive: 10_000,
     });
     client.on("error", (err) => {
       // 连接失败不使进程崩溃，健康检查负责上报状态

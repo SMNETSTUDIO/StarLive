@@ -2,11 +2,13 @@ import { Injectable } from "@nestjs/common";
 import { createHash, randomBytes } from "crypto";
 import { ErrorCode, Keys, type Room } from "@starlive/shared";
 import { genId } from "../common/audit";
+import { cached, invalidateCache } from "../common/cache";
 import { BizException } from "../common/errors";
 import { redis, redisPipeline } from "../common/redis";
 import {
   bindStreamKey,
   countViewers,
+  countViewersBatch,
   getRoom,
   heartbeatViewer,
   setRoomField,
@@ -81,6 +83,7 @@ export class RoomsService {
       if (room.category) p.sadd(Keys.categoryRooms(room.category), roomId);
     });
     await bindStreamKey(streamInfo.streamKey, roomId);
+    invalidateCache("rooms:list:");
 
     return { id: roomId, ...this.sanitize(room) };
   }
@@ -125,6 +128,19 @@ export class RoomsService {
   }
 
   async list(opts: { userId?: string; mine?: boolean; publicOnly?: boolean; category?: string }) {
+    // 公开列表（直播广场/首页高频轮询）走 3s 进程内缓存，Redis 压力与首屏延迟都大幅下降
+    if (!opts.mine) {
+      return cached(`rooms:list:${opts.category ?? ""}`, 3000, () => this.buildList(opts));
+    }
+    return this.buildList(opts);
+  }
+
+  private async buildList(opts: {
+    userId?: string;
+    mine?: boolean;
+    publicOnly?: boolean;
+    category?: string;
+  }) {
     const r = redis();
     let ids: string[];
 
@@ -161,23 +177,29 @@ export class RoomsService {
       }))
       .filter((rm) => !rm.banned && (opts.mine || rm.isPublic || rm.status === "active"));
 
-    const out: Array<Record<string, unknown>> = [];
-    for (const rm of rooms) {
-      // 仅对已开播房间刷新真实推流状态（按房间自身 Provider，带缓存，成本可控）
-      if (rm.streamId && rm.status === "active") {
-        try {
-          rm.status = (await this.stream.getStream(rm.streamId, rm.provider)).status;
-          if (rm.status !== "active") await setRoomStatus(rm._roomId, rm.status as "idle" | "active");
-        } catch {
-          /* keep */
-        }
-      }
-      const counts = await countViewers(rm._roomId);
-      const { _roomId: _x, ...rest } = rm;
-      void _x;
-      out.push({ ...rest, ...counts });
-    }
-    return out;
+    // 推流状态并发刷新（各自带 5s 内存缓存）+ 在线人数一次 pipeline 批量取
+    const [countsMap] = await Promise.all([
+      countViewersBatch(rooms.map((rm) => rm._roomId)),
+      Promise.all(
+        rooms
+          .filter((rm) => rm.streamId && rm.status === "active")
+          .map(async (rm) => {
+            try {
+              rm.status = (await this.stream.getStream(rm.streamId!, rm.provider)).status;
+              if (rm.status !== "active") {
+                await setRoomStatus(rm._roomId, rm.status as "idle" | "active");
+              }
+            } catch {
+              /* keep */
+            }
+          }),
+      ),
+    ]);
+
+    return rooms.map((rm) => {
+      const { _roomId, ...rest } = rm;
+      return { ...rest, ...(countsMap.get(_roomId) ?? { viewerCount: 0, registeredCount: 0, guestCount: 0 }) };
+    });
   }
 
   async update(
@@ -196,6 +218,7 @@ export class RoomsService {
       if (pub) await r.sadd(Keys.publicRoomsSet, roomId);
       else await r.srem(Keys.publicRoomsSet, roomId);
     }
+    invalidateCache("rooms:list:");
     return { ok: true, ...room };
   }
 
@@ -212,6 +235,7 @@ export class RoomsService {
     if (input.tags !== undefined) {
       await setRoomField(roomId, "tags", JSON.stringify(input.tags));
     }
+    invalidateCache("rooms:list:");
     return { ok: true };
   }
 
@@ -275,6 +299,7 @@ export class RoomsService {
       p.srem(Keys.userRooms(room.ownerId), roomId);
       if (room.category) p.srem(Keys.categoryRooms(room.category), roomId);
     });
+    invalidateCache("rooms:list:");
     return { ok: true };
   }
 
@@ -377,23 +402,21 @@ export class RoomsService {
       r.smembers(Keys.userRooms(targetUserId)),
     ]);
 
-    const rooms: Array<Record<string, unknown>> = [];
-    for (const id of roomIds) {
-      const room = await getRoom(id);
-      if (!room || room.banned || !room.isPublic) continue;
-      const counts = await countViewers(id);
-      rooms.push({
-        id: room.id,
-        title: room.title,
-        announcement: room.announcement,
-        category: room.category,
-        tags: room.tags,
-        status: room.status,
-        playbackUrl: room.playbackUrl,
-        createdAt: room.createdAt,
-        ...counts,
-      });
-    }
+    // 并发取房间详情（autoPipelining 合并往返）+ 批量在线人数
+    const details = await Promise.all(roomIds.map((id) => getRoom(id)));
+    const visible = details.filter((rm): rm is NonNullable<typeof rm> => Boolean(rm && !rm.banned && rm.isPublic));
+    const countsMap = await countViewersBatch(visible.map((rm) => rm.id));
+    const rooms: Array<Record<string, unknown>> = visible.map((room) => ({
+      id: room.id,
+      title: room.title,
+      announcement: room.announcement,
+      category: room.category,
+      tags: room.tags,
+      status: room.status,
+      playbackUrl: room.playbackUrl,
+      createdAt: room.createdAt,
+      ...(countsMap.get(room.id) ?? { viewerCount: 0, registeredCount: 0, guestCount: 0 }),
+    }));
     // 开播的排前面
     rooms.sort((a, b) => Number(b.status === "active") - Number(a.status === "active"));
 
