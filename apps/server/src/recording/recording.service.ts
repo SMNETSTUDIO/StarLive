@@ -17,8 +17,8 @@ export class RecordingService {
     const room = await getRoom(roomId);
     if (!room) throw new BizException(ErrorCode.NOT_FOUND, "房间不存在");
 
-    // 本地录制（worker 产出） + 流服务录制资产
-    const ids = await redis().zrange(`room:recordings:${roomId}`, 0, -1);
+    // 本地录制（worker 产出，最新 200 条） + 流服务录制资产
+    const ids = await redis().zrevrange(`room:recordings:${roomId}`, 0, 199);
     const local = ids.length
       ? (await redisPipeline<Record<string, string>>((p) => {
           for (const id of ids) p.hgetall(Keys.recording(id));
@@ -34,6 +34,7 @@ export class RecordingService {
       }
     }
 
+    // 本地 + 流服务合并后统一按时间倒序（最新在前），顺序确定
     return [
       ...local.map((r) => ({
         id: r.id,
@@ -43,7 +44,7 @@ export class RecordingService {
         downloadUrl: r.downloadUrl,
       })),
       ...remote,
-    ];
+    ].sort((a, b) => b.createdAt - a.createdAt);
   }
 
   async download(recordingId: string): Promise<{ url: string }> {

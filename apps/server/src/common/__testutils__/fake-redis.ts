@@ -68,6 +68,10 @@ export class FakeRedis {
     this.roundTrips++;
     return this._hgetall(key);
   }
+  async hget(key: string, field: string): Promise<string | null> {
+    this.roundTrips++;
+    return this._hget(key, field);
+  }
   async smembers(key: string): Promise<string[]> {
     this.roundTrips++;
     return this._smembers(key);

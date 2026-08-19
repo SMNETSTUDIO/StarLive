@@ -3,6 +3,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useState,
   type ReactNode,
 } from "react";
@@ -72,13 +73,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const isAdmin = !!user?.isSuperAdmin || (user?.permissions?.length ?? 0) > 0;
 
-  return (
-    <AuthContext.Provider
-      value={{ user, loading, isAdmin, refresh, login, register, logout }}
-    >
-      {children}
-    </AuthContext.Provider>
+  // context value 用 useMemo 稳定引用：避免 Provider 因父级重渲染时
+  // 生成新对象导致所有 useAuth 消费者无谓重渲染
+  const value = useMemo(
+    () => ({ user, loading, isAdmin, refresh, login, register, logout }),
+    [user, loading, isAdmin, refresh, login, register, logout],
   );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth(): AuthContextValue {

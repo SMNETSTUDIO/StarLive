@@ -128,7 +128,8 @@ export class RedpacketService {
 
   async list(roomId: string) {
     const now = Date.now();
-    const ids = await redis().zrangebyscore(Keys.roomRedpackets(roomId), "-inf", "+inf");
+    // 只取最新 50 个：房间历史红包会持续累积，避免无界拉取
+    const ids = await redis().zrevrange(Keys.roomRedpackets(roomId), 0, 49);
     const rows = await redisPipeline<Record<string, string>>((p) => {
       for (const id of ids) p.hgetall(Keys.redpacket(id));
     });
@@ -151,6 +152,7 @@ export class RedpacketService {
         empty: remaining.length === 0,
       });
     }
-    return out.reverse();
+    // zrevrange 已按最新在前返回，无需再反转
+    return out;
   }
 }

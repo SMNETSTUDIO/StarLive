@@ -98,11 +98,13 @@ export class LotteryService {
       const winnerCount = Math.min(Number(raw.winnerCount), participants.length);
       const winners = shuffle(participants).slice(0, winnerCount);
 
-      // 中奖者解析为用户名，弹窗/面板直接可读
-      const { getUserById } = await import("../common/user-store");
-      const winnerNames = (
-        await Promise.all(winners.map((id) => getUserById(id)))
-      ).map((u, i) => u?.name ?? u?.username ?? winners[i]);
+      // 中奖者解析为用户名，弹窗/面板直接可读（一次流水线批量取）
+      const { getUsersByIds } = await import("../common/user-store");
+      const winnerUsers = await getUsersByIds(winners);
+      const winnerNames = winners.map((id) => {
+        const u = winnerUsers.get(id);
+        return u?.name ?? u?.username ?? id;
+      });
 
       await redisPipeline((p) => {
         p.hset(Keys.lottery(lotteryId), {

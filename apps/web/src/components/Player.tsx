@@ -6,6 +6,14 @@ type Status = "connecting" | "waiting" | "playing" | "paused";
 const RETRY_MS = 4000;
 const AUTO_LEVEL = -1;
 
+// hls.js 模块级单例加载：保持独立 chunk 懒加载，但断流重试/换源
+// 反复调用 start() 时只解析一次动态 import，不重复走模块解析
+let hlsModule: Promise<typeof import("hls.js")> | null = null;
+function loadHls(): Promise<typeof import("hls.js")> {
+  hlsModule ??= import("hls.js");
+  return hlsModule;
+}
+
 interface PlayerProps {
   src: string;
   /** 弹幕/礼物特效等覆盖层，渲染在播放器内部（全屏时可见） */
@@ -59,7 +67,7 @@ export default function Player({ src, children, danmakuOn, onToggleDanmaku }: Pl
       retryRef.current = setTimeout(start, RETRY_MS);
     };
 
-    void import("hls.js").then(({ default: HlsCls }) => {
+    void loadHls().then(({ default: HlsCls }) => {
       if (sessionRef.current !== sid) return;
 
       if (HlsCls.isSupported()) {

@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import * as bcrypt from "bcryptjs";
 import { ErrorCode, Keys } from "@starlive/shared";
+import { invalidateAdminContext } from "../common/admin";
 import { writeAdminAuditLog } from "../common/audit";
 import { invalidateCache } from "../common/cache";
 import { BizException } from "../common/errors";
@@ -256,9 +257,11 @@ export class AdminService {
 
     // 两阶段批量：所有房间的录播索引+标题一次往返，全部录播详情再一次往返
     // （原实现逐房间串行 zrange+hget，N 个房间 2N+ 次往返）
+    // 每房间只取最新 200 条（score=时间戳）：全局 top200 任一房间贡献不超过 200，
+    // 避免录播多的房间把全量索引拉回来再在内存里裁剪
     const phase1 = await redisPipeline<string[] | string | null>((p) => {
       for (const roomId of roomIds) {
-        p.zrange(`room:recordings:${roomId}`, 0, -1);
+        p.zrevrange(`room:recordings:${roomId}`, 0, 199);
         p.hget(Keys.room(roomId), "title");
       }
     });
@@ -355,9 +358,12 @@ export class AdminService {
   async updateRole(roleId: string, permissions: string[]) {
     if (roleId === "super_admin") {
       await redis().hset(Keys.adminRoles, roleId, JSON.stringify(DEFAULT_ADMIN_PERMISSIONS));
+      invalidateAdminContext();
       return { ok: true };
     }
     await redis().hset(Keys.adminRoles, roleId, JSON.stringify(permissions ?? []));
+    // 角色权限变化影响所有挂该角色的用户，清空全部管理员上下文缓存
+    invalidateAdminContext();
     return { ok: true };
   }
 
@@ -366,6 +372,7 @@ export class AdminService {
     if (!user) throw new Error("user_not_found");
     if (roleId) await redis().hset(Keys.adminUserRoles, userId, roleId);
     else await redis().hdel(Keys.adminUserRoles, userId);
+    invalidateAdminContext(userId);
     return { ok: true };
   }
 

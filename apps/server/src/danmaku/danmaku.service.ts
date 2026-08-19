@@ -41,9 +41,12 @@ export class DanmakuService {
     const identity = input.userId ?? input.guestId ?? "anon";
 
     // 全部前置校验并发执行（autoPipelining 合并为一次往返；原为 6+ 次串行）
+    // global_mute 复用 runtimeConfig 的 10s 进程内缓存（后台保存配置时即时失效），
+    // 免去每条弹幕一次 hget
+    const { runtimeConfig } = await import("../common/runtime-config");
     const [room, globalMute, user, roomMuted, rateOk, words] = await Promise.all([
       getRoom(input.roomId),
-      redis().hget(Keys.systemConfig, "global_mute"),
+      runtimeConfig("global_mute"),
       input.userId ? getUserById(input.userId) : Promise.resolve(null),
       redis().exists(Keys.roomMuted(input.roomId, identity)),
       this.checkRate(identity),
