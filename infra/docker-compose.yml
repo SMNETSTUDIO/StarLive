@@ -22,9 +22,8 @@ services:
       - ./mediamtx.yml:/mediamtx.yml
     ports:
       - "1935:1935" # RTMP 推流
-      - "8888:8888" # HLS / HTTP
       - "8889:8889" # WebRTC
-      - "9997:9997" # 控制 API
+      - "8889:8889/udp" # WebRTC
     restart: unless-stopped
 
   # 前后端一体化：同一容器同时提供网页 + /api + /socket.io + /hls（3000 端口）
@@ -48,6 +47,11 @@ services:
         condition: service_started
     ports:
       - "3000:3000"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     restart: unless-stopped
 
   worker:

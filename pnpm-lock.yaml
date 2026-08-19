@@ -74,9 +74,6 @@ importers:
       '@starlive/shared':
         specifier: workspace:*
         version: link:../../packages/shared
-      '@types/qrcode':
-        specifier: ^1.5.6
-        version: 1.5.6
       hls.js:
         specifier: ^1.5.13
         version: 1.7.0
@@ -96,6 +93,9 @@ importers:
         specifier: ^4.8.0
         version: 4.8.3(supports-color@7.2.0)
     devDependencies:
+      '@types/qrcode':
+        specifier: ^1.5.6
+        version: 1.5.6
       '@types/react':
         specifier: ^18.3.3
         version: 18.3.31
