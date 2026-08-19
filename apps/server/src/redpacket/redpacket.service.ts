@@ -6,11 +6,7 @@ import { EVT, publishEvent } from "../common/event-bus";
 import { acquireLock } from "../common/lock";
 import { redis, redisPipeline } from "../common/redis";
 import { getRoom } from "../common/room-store";
-import {
-  addTransaction,
-  applyBalanceDelta,
-  getBalance,
-} from "../common/wallet-store";
+import { addTransaction, getBalance } from "../common/wallet-store";
 
 const EXPIRE_MS = 24 * 60 * 60 * 1000;
 
@@ -57,8 +53,11 @@ export class RedpacketService {
       const b = await getBalance(input.senderId);
       if (b.coins < total) throw new BizException(ErrorCode.INSUFFICIENT_BALANCE, "星币余额不足");
 
-      await applyBalanceDelta(input.senderId, { coins: -total });
-      await addTransaction(input.senderId, "redpacket_send", -total, (await getBalance(input.senderId)).coins);
+      // 扣款返回新余额，免重读
+      const [afterRaw] = await redisPipeline<string>((p) => {
+        p.hincrbyfloat(Keys.userBalance(input.senderId), "coins", -total);
+      });
+      await addTransaction(input.senderId, "redpacket_send", -total, Number(afterRaw));
 
       const id = genId("rp_");
       const now = Date.now();

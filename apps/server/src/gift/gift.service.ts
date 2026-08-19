@@ -118,15 +118,21 @@ export class GiftService {
     const since = Date.now() - windowDays * 86400_000;
 
     // 各房间窗口内的打赏记录（每房间上限 1000 条，防极端数据量）
-    const records: Record<string, string>[] = [];
-    for (const roomId of roomIds) {
-      const ids = await r.zrevrangebyscore(Keys.roomRewards(roomId), "+inf", since, "LIMIT", 0, 1000);
-      if (ids.length === 0) continue;
-      const rows = await redisPipeline<Record<string, string>>((p) => {
-        for (const id of ids) p.hgetall(Keys.rewardRecord(id));
-      });
-      records.push(...rows.filter((x) => x && x.id));
-    }
+    // 两阶段批量：所有房间的打赏索引一次往返，全部记录详情再一次往返
+    const idLists = await redisPipeline<string[]>((p) => {
+      for (const roomId of roomIds) {
+        p.zrevrangebyscore(Keys.roomRewards(roomId), "+inf", since, "LIMIT", 0, 1000);
+      }
+    });
+    const allIds = idLists.flat();
+    const records: Record<string, string>[] =
+      allIds.length === 0
+        ? []
+        : (
+            await redisPipeline<Record<string, string>>((p) => {
+              for (const id of allIds) p.hgetall(Keys.rewardRecord(id));
+            })
+          ).filter((x) => x && x.id);
 
     // 按天趋势（对齐管理后台的桶格式）
     const buckets: { date: string; key: string; coins: number; count: number }[] = [];
@@ -173,13 +179,14 @@ export class GiftService {
       byGifter.set(gifterKey, gifter);
     }
 
-    // 房间标题（含窗口内无收益的房间，便于前端逐房间展示）
-    const roomsOut: { roomId: string; title: string; coins: number; count: number }[] = [];
-    for (const roomId of roomIds) {
-      const room = await getRoom(roomId);
+    // 房间标题（含窗口内无收益的房间，便于前端逐房间展示）—— 一次往返批量取
+    const titles = await redisPipeline<string | null>((p) => {
+      for (const roomId of roomIds) p.hget(Keys.room(roomId), "title");
+    });
+    const roomsOut = roomIds.map((roomId, i) => {
       const agg = byRoom.get(roomId);
-      roomsOut.push({ roomId, title: room?.title ?? roomId, coins: agg?.coins ?? 0, count: agg?.count ?? 0 });
-    }
+      return { roomId, title: titles[i] ?? roomId, coins: agg?.coins ?? 0, count: agg?.count ?? 0 };
+    });
     roomsOut.sort((a, b) => b.coins - a.coins);
 
     const recent = records
