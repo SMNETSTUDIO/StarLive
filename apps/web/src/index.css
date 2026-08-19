@@ -1563,10 +1563,13 @@ code {
   inset: 0;
   pointer-events: none;
   overflow: hidden;
+  container-type: inline-size;
 }
 
 .danmaku-item {
   position: absolute;
+  /* 从容器右边缘进场 */
+  left: 100%;
   white-space: nowrap;
   font-size: 16px;
   font-weight: 600;
@@ -1576,10 +1579,11 @@ code {
 
 @keyframes danmaku-move {
   from {
-    transform: translateX(100%);
+    transform: translateX(0);
   }
   to {
-    transform: translateX(-120%);
+    /* 容器宽 + 自身宽：完整滑过并移出左边缘 */
+    transform: translateX(calc(-100cqw - 100%));
   }
 }
 
