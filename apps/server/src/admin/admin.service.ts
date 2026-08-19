@@ -252,34 +252,42 @@ export class AdminService {
   async listRecordings() {
     const r = redis();
     const roomIds = await r.smembers(Keys.roomsSet);
-    const items: {
-      id: string;
-      roomId: string;
-      roomTitle: string;
-      duration: number;
-      createdAt: number;
-      downloadUrl?: string;
-    }[] = [];
-    for (const roomId of roomIds) {
-      const recIds = await r.zrange(`room:recordings:${roomId}`, 0, -1);
-      if (recIds.length === 0) continue;
-      const title = (await r.hget(Keys.room(roomId), "title")) ?? roomId;
-      const rows = await redisPipeline<Record<string, string>>((p) => {
-        for (const id of recIds) p.hgetall(Keys.recording(id));
-      });
-      for (const rec of rows) {
-        if (!rec || !rec.id) continue;
-        items.push({
-          id: rec.id,
-          roomId,
-          roomTitle: title,
-          duration: Number(rec.duration ?? 0),
-          createdAt: Number(rec.createdAt ?? 0),
-          downloadUrl: rec.downloadUrl,
-        });
+    if (roomIds.length === 0) return [];
+
+    // 两阶段批量：所有房间的录播索引+标题一次往返，全部录播详情再一次往返
+    // （原实现逐房间串行 zrange+hget，N 个房间 2N+ 次往返）
+    const phase1 = await redisPipeline<string[] | string | null>((p) => {
+      for (const roomId of roomIds) {
+        p.zrange(`room:recordings:${roomId}`, 0, -1);
+        p.hget(Keys.room(roomId), "title");
       }
-    }
-    return items.sort((a, b) => b.createdAt - a.createdAt).slice(0, 200);
+    });
+
+    const refs: { recId: string; roomId: string; roomTitle: string }[] = [];
+    roomIds.forEach((roomId, i) => {
+      const recIds = (phase1[i * 2] as string[]) ?? [];
+      const title = (phase1[i * 2 + 1] as string | null) ?? roomId;
+      for (const recId of recIds) refs.push({ recId, roomId, roomTitle: title });
+    });
+    if (refs.length === 0) return [];
+
+    const rows = await redisPipeline<Record<string, string>>((p) => {
+      for (const ref of refs) p.hgetall(Keys.recording(ref.recId));
+    });
+
+    return rows
+      .map((rec, i) => ({ rec, ref: refs[i] }))
+      .filter(({ rec }) => rec && rec.id)
+      .map(({ rec, ref }) => ({
+        id: rec.id,
+        roomId: ref.roomId,
+        roomTitle: ref.roomTitle,
+        duration: Number(rec.duration ?? 0),
+        createdAt: Number(rec.createdAt ?? 0),
+        downloadUrl: rec.downloadUrl,
+      }))
+      .sort((a, b) => b.createdAt - a.createdAt)
+      .slice(0, 200);
   }
 
   /** 删除录播记录 */

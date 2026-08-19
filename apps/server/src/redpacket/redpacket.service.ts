@@ -97,25 +97,28 @@ export class RedpacketService {
     const release = await acquireLock(`redpacket:${redpacketId}`, 15000);
     if (!release) throw new BizException(ErrorCode.INTERNAL, "系统繁忙");
     try {
-      const raw = await redis().hgetall(Keys.redpacket(redpacketId));
+      // 红包数据与领取记录并发读取（一次往返）
+      const [raw, already] = await Promise.all([
+        redis().hgetall(Keys.redpacket(redpacketId)),
+        redis().sismember(Keys.redpacketClaims(redpacketId), userId),
+      ]);
       if (!raw || !raw.id) throw new BizException(ErrorCode.NOT_FOUND, "红包不存在");
       if (Number(raw.expiresAt) < Date.now()) {
         throw new BizException(ErrorCode.REDPACKET_EXPIRED, "红包已过期");
       }
-      const already = await redis().sismember(Keys.redpacketClaims(redpacketId), userId);
       if (already) throw new BizException(ErrorCode.DUPLICATE_CLAIM, "你已经领取过该红包");
 
       const remaining: number[] = raw.remaining ? JSON.parse(raw.remaining) : [];
       if (remaining.length === 0) throw new BizException(ErrorCode.REDPACKET_EMPTY, "红包已抢完");
 
       const amount = remaining.shift() as number;
-      await applyBalanceDelta(userId, { coins: amount });
-      await addTransaction(userId, "redpacket_receive", amount, (await getBalance(userId)).coins, redpacketId);
-
-      await redisPipeline((p) => {
+      // 入账 + 领取标记 + 剩余额度更新合并一次往返（hincrbyfloat 返回新余额，免重读）
+      const [afterRaw] = await redisPipeline<string>((p) => {
+        p.hincrbyfloat(Keys.userBalance(userId), "coins", amount);
         p.sadd(Keys.redpacketClaims(redpacketId), userId);
         p.hset(Keys.redpacket(redpacketId), { remaining: JSON.stringify(remaining) });
       });
+      await addTransaction(userId, "redpacket_receive", amount, Number(afterRaw), redpacketId);
 
       publishEvent(EVT.REDPACKET_CLAIMED, { redpacketId, roomId: raw.roomId, userName: userId, amount, ts: Date.now() });
       return { amount };

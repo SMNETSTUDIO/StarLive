@@ -48,6 +48,52 @@ export async function applyBalanceDelta(
   await pipe.exec();
 }
 
+/**
+ * 星币转账：扣款+入账一次往返（hincrbyfloat 返回值即新余额），
+ * 双方流水再合一次往返。调用方需先校验余额并持有余额锁。
+ */
+export async function transferCoins(
+  fromUserId: string,
+  toUserId: string,
+  amount: number,
+  fromType: TransactionType,
+  toType: TransactionType,
+  meta?: string,
+): Promise<{ fromAfter: number; toAfter: number }> {
+  const [fromRaw, toRaw] = await redisPipeline<string>((p) => {
+    p.hincrbyfloat(Keys.userBalance(fromUserId), "coins", -amount);
+    p.hincrbyfloat(Keys.userBalance(toUserId), "coins", amount);
+  });
+  const fromAfter = Number(fromRaw);
+  const toAfter = Number(toRaw);
+  const ts = Date.now();
+  const fromTx = genId("tx_");
+  const toTx = genId("tx_");
+  await redisPipeline((p) => {
+    p.hset(Keys.userTransaction(fromUserId, fromTx), {
+      id: fromTx,
+      userId: fromUserId,
+      type: fromType,
+      amount: String(-amount),
+      balanceAfter: String(fromAfter),
+      meta: meta ?? "",
+      ts: String(ts),
+    });
+    p.zadd(Keys.userTransactionsIndex(fromUserId), ts, fromTx);
+    p.hset(Keys.userTransaction(toUserId, toTx), {
+      id: toTx,
+      userId: toUserId,
+      type: toType,
+      amount: String(amount),
+      balanceAfter: String(toAfter),
+      meta: meta ?? "",
+      ts: String(ts),
+    });
+    p.zadd(Keys.userTransactionsIndex(toUserId), ts, toTx);
+  });
+  return { fromAfter, toAfter };
+}
+
 export async function addTransaction(
   userId: string,
   type: TransactionType,

@@ -1,16 +1,13 @@
 import { Injectable } from "@nestjs/common";
 import { ErrorCode, Keys, type GiftDefinition, type GiftMessage } from "@starlive/shared";
 import { genId } from "../common/audit";
+import { cached } from "../common/cache";
 import { BizException } from "../common/errors";
 import { EVT, publishEvent } from "../common/event-bus";
 import { acquireLock } from "../common/lock";
 import { redis, redisPipeline } from "../common/redis";
 import { getRoom } from "../common/room-store";
-import {
-  addTransaction,
-  applyBalanceDelta,
-  getBalance,
-} from "../common/wallet-store";
+import { getBalance, transferCoins } from "../common/wallet-store";
 
 @Injectable()
 export class GiftService {
@@ -42,12 +39,15 @@ export class GiftService {
     if (count < 1 || count > 100) {
       throw new BizException(ErrorCode.INVALID_AMOUNT, "单次送礼 1-100 个");
     }
-    const giftRaw = await redis().hgetall(Keys.giftDef(input.giftId));
+    // 礼物定义 60s 内存缓存（几乎不变），与房间信息并发读取
+    const [giftRaw, room] = await Promise.all([
+      cached(`gift:def:${input.giftId}`, 60_000, () => redis().hgetall(Keys.giftDef(input.giftId))),
+      getRoom(input.roomId),
+    ]);
     if (!giftRaw || !giftRaw.id) throw new BizException(ErrorCode.NOT_FOUND, "礼物不存在");
     const price = Number(giftRaw.price);
     const total = price * count;
 
-    const room = await getRoom(input.roomId);
     if (!room) throw new BizException(ErrorCode.NOT_FOUND, "房间不存在");
     const toUserId = room.ownerId;
 
@@ -58,14 +58,12 @@ export class GiftService {
       if (balance.coins < total) {
         throw new BizException(ErrorCode.INSUFFICIENT_BALANCE, "星币余额不足");
       }
-      await applyBalanceDelta(input.userId, { coins: -total });
-      await applyBalanceDelta(toUserId, { coins: total });
-
-      const senderAfter = (await getBalance(input.userId)).coins;
-      const receiverAfter = (await getBalance(toUserId)).coins;
       const rewardId = genId("rw_");
 
-      await redisPipeline((p) => {
+      // 转账（扣款+入账+双方流水，2 次往返）与打赏记录写入互不依赖，并发执行
+      await Promise.all([
+        transferCoins(input.userId, toUserId, total, "gift_send", "gift_receive", rewardId),
+        redisPipeline((p) => {
         p.hset(Keys.rewardRecord(rewardId), {
           id: rewardId,
           roomId: input.roomId,
@@ -80,10 +78,8 @@ export class GiftService {
           ts: String(Date.now()),
         });
         p.zadd(Keys.roomRewards(input.roomId), Date.now(), rewardId);
-      });
-
-      await addTransaction(input.userId, "gift_send", -total, senderAfter, rewardId);
-      await addTransaction(toUserId, "gift_receive", total, receiverAfter, rewardId);
+        }),
+      ]);
 
       const msg: GiftMessage = {
         id: rewardId,
