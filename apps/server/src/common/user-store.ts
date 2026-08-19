@@ -59,6 +59,22 @@ export async function getUserById(id: string): Promise<UserRecord | null> {
   return raw as unknown as UserRecord;
 }
 
+/**
+ * 批量取用户：一次流水线取回全部 hgetall，避免 for-await 逐个往返。
+ * 返回按 id 索引的 Map（不存在的用户不入表）。
+ */
+export async function getUsersByIds(ids: string[]): Promise<Map<string, UserRecord>> {
+  const map = new Map<string, UserRecord>();
+  if (ids.length === 0) return map;
+  const rows = await redisPipeline<Record<string, string>>((p) => {
+    for (const id of ids) p.hgetall(Keys.user(id));
+  });
+  rows.forEach((raw, i) => {
+    if (raw && raw.id) map.set(ids[i], raw as unknown as UserRecord);
+  });
+  return map;
+}
+
 export async function getUserByUsername(username: string): Promise<UserRecord | null> {
   const id = await redis().get(Keys.userByUsername(username));
   if (!id) return null;

@@ -39,13 +39,13 @@ export class ModerationService {
 
   async listModerators(roomId: string) {
     const ids = await redis().smembers(Keys.roomModerators(roomId));
-    const { getUserById } = await import("../common/user-store");
-    const out: { id: string; name: string; avatarUrl?: string }[] = [];
-    for (const id of ids) {
-      const u = await getUserById(id);
-      out.push({ id, name: u ? (u.name ?? u.username) : id, avatarUrl: u?.avatarUrl });
-    }
-    return out;
+    if (ids.length === 0) return [];
+    const { getUsersByIds } = await import("../common/user-store");
+    const map = await getUsersByIds(ids);
+    return ids.map((id) => {
+      const u = map.get(id);
+      return { id, name: u ? (u.name ?? u.username) : id, avatarUrl: u?.avatarUrl };
+    });
   }
 
   async mute(
@@ -88,18 +88,21 @@ export class ModerationService {
   async mutedUsers(roomId: string) {
     const raw = await redis().hgetall(`${Keys.room(roomId)}:muted:list`);
     const now = Date.now();
-    const { getUserById } = await import("../common/user-store");
-    const out: { identity: string; name: string; expiresAt: number }[] = [];
-    for (const [identity, expiresAt] of Object.entries(raw)) {
-      if (expiresAt !== "0" && Number(expiresAt) <= now) continue;
-      const u = identity.startsWith("u_") ? await getUserById(identity) : null;
-      out.push({
+    // 先按过期时间过滤出仍生效的条目，再一次流水线批量取注册用户
+    const active = Object.entries(raw).filter(
+      ([, expiresAt]) => expiresAt === "0" || Number(expiresAt) > now,
+    );
+    const { getUsersByIds } = await import("../common/user-store");
+    const userIds = active.map(([identity]) => identity).filter((id) => id.startsWith("u_"));
+    const map = await getUsersByIds(userIds);
+    return active.map(([identity, expiresAt]) => {
+      const u = identity.startsWith("u_") ? map.get(identity) : null;
+      return {
         identity,
         name: u ? (u.name ?? u.username) : `游客_${identity.slice(-4)}`,
         expiresAt: expiresAt === "0" ? 0 : Number(expiresAt),
-      });
-    }
-    return out;
+      };
+    });
   }
 
   async moderationLog(roomId: string, limit = 50) {

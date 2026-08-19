@@ -345,16 +345,19 @@ export class RoomsService {
   /** 在线观众名单（注册用户，最多 30 人）+ 游客数 */
   async onlineViewers(roomId: string) {
     const { VIEWER_TTL_MS } = await import("../common/room-store");
-    const { getUserById } = await import("../common/user-store");
+    const { getUsersByIds } = await import("../common/user-store");
     const r = redis();
     const min = Date.now() - VIEWER_TTL_MS;
-    const ids = await r.zrangebyscore(Keys.roomViewersUser(roomId), min, "+inf", "LIMIT", 0, 30);
-    const users: { id: string; name: string; avatarUrl?: string }[] = [];
-    for (const id of ids) {
-      const u = await getUserById(id);
-      if (u) users.push({ id: u.id, name: u.name ?? u.username, avatarUrl: u.avatarUrl });
-    }
-    const guestCount = await r.zcount(Keys.roomViewersGuest(roomId), min, "+inf");
+    const [ids, guestCount] = await Promise.all([
+      r.zrangebyscore(Keys.roomViewersUser(roomId), min, "+inf", "LIMIT", 0, 30),
+      r.zcount(Keys.roomViewersGuest(roomId), min, "+inf"),
+    ]);
+    // 一次流水线批量取用户，保持 zset 顺序
+    const map = await getUsersByIds(ids);
+    const users = ids.flatMap((id) => {
+      const u = map.get(id);
+      return u ? [{ id: u.id, name: u.name ?? u.username, avatarUrl: u.avatarUrl }] : [];
+    });
     return { users, guestCount };
   }
 
@@ -443,32 +446,40 @@ export class RoomsService {
   async followingList(userId: string) {
     const ids = await redis().smembers(Keys.userFollowing(userId));
     if (ids.length === 0) return [];
-    const { getUserById } = await import("../common/user-store");
-    const result: {
-      userId: string;
-      name: string;
-      avatarUrl?: string;
-      roomId?: string;
-      live: boolean;
-    }[] = [];
-    for (const id of ids) {
-      const u = await getUserById(id);
-      if (!u) continue;
-      const roomIds = await redis().smembers(Keys.userRooms(id));
-      const roomId = roomIds[0];
-      let live = false;
-      if (roomId) {
-        const room = await getRoom(roomId);
-        live = room?.status === "active";
+    const { getUsersByIds } = await import("../common/user-store");
+
+    // 1) 一次流水线批量取被关注用户
+    // 2) 一次流水线批量取每人的房间集合
+    const [users, roomIdLists] = await Promise.all([
+      getUsersByIds(ids),
+      redisPipeline<string[]>((p) => {
+        for (const id of ids) p.smembers(Keys.userRooms(id));
+      }),
+    ]);
+
+    // 3) 一次流水线批量取各首个房间的状态
+    const firstRoomIds = roomIdLists.map((list) => list?.[0]);
+    const statuses = await redisPipeline<string | null>((p) => {
+      for (const roomId of firstRoomIds) {
+        // 无房间的占位一个命令，保持与 ids 一一对应
+        p.hget(roomId ? Keys.room(roomId) : Keys.room("__none__"), "status");
       }
-      result.push({
-        userId: id,
-        name: u.name ?? u.username,
-        avatarUrl: u.avatarUrl,
-        roomId,
-        live,
-      });
-    }
+    });
+
+    const result = ids.flatMap((id, i) => {
+      const u = users.get(id);
+      if (!u) return [];
+      const roomId = firstRoomIds[i];
+      return [
+        {
+          userId: id,
+          name: u.name ?? u.username,
+          avatarUrl: u.avatarUrl,
+          roomId,
+          live: !!roomId && statuses[i] === "active",
+        },
+      ];
+    });
     // 开播的排前面
     return result.sort((a, b) => Number(b.live) - Number(a.live));
   }

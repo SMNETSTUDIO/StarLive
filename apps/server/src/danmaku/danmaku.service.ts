@@ -120,9 +120,12 @@ export class DanmakuService {
 
   private async checkRate(identity: string): Promise<boolean> {
     const key = `rl:danmaku:${identity}`;
-    const r = redis();
-    const count = await r.incr(key);
-    if (count === 1) await r.expire(key, RATE_WINDOW_SEC);
+    // incr 与首次 expire 原子执行：避免首条命令后崩溃残留无 TTL 的计数键
+    const script =
+      "local c = redis.call('incr', KEYS[1]) " +
+      "if c == 1 then redis.call('expire', KEYS[1], ARGV[1]) end " +
+      "return c";
+    const count = (await redis().eval(script, 1, key, String(RATE_WINDOW_SEC))) as number;
     return count <= RATE_MAX;
   }
 }

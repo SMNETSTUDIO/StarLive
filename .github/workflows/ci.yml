@@ -37,3 +37,6 @@ jobs:
 
       - name: 构建全部包（shared / server / web / worker）
         run: pnpm build
+
+      - name: 运行单元测试
+        run: pnpm test
