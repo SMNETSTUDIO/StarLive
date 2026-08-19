@@ -6,6 +6,7 @@ import type {
   StreamProvider,
 } from "@starlive/shared";
 import { cached, invalidateCache } from "../common/cache";
+import { getAppBaseUrl } from "../common/runtime-config";
 import { config } from "../config/config";
 
 async function fetchWithTimeout(url: string, ms: number): Promise<Response> {
@@ -27,7 +28,7 @@ class SelfHostedProvider implements StreamProvider {
       streamId: streamKey,
       streamKey,
       playbackId: streamKey,
-      playbackUrl: `${config.appBaseUrl}/hls/${streamKey}/index.m3u8`,
+      playbackUrl: `${await getAppBaseUrl()}/hls/${streamKey}/index.m3u8`,
     };
   }
 

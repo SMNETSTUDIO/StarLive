@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { Keys, type SystemFeatures } from "@starlive/shared";
 import { redis } from "../common/redis";
+import { invalidateRuntimeConfig } from "../common/runtime-config";
 
 const DEFAULT_FEATURES: SystemFeatures = {
   maintenanceEnabled: false,
@@ -50,6 +51,7 @@ export class SystemService {
   async setConfig(partial: Record<string, string>): Promise<void> {
     if (Object.keys(partial).length === 0) return;
     await redis().hset(Keys.systemConfig, partial);
+    invalidateRuntimeConfig();
   }
 
   async getAnnouncement(): Promise<{ title: string; content: string }> {

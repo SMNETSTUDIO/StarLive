@@ -14,6 +14,7 @@ interface Features {
 const PAY_PROVIDERS = [
   { value: "epay", label: "易支付" },
   { value: "alipay", label: "支付宝" },
+  { value: "wechat", label: "微信支付" },
   { value: "stripe", label: "Stripe" },
   { value: "mock", label: "沙箱支付" },
 ] as const;
@@ -26,10 +27,32 @@ const PAY_FIELD_LABELS: Record<string, Record<string, string>> = {
     alipayPublicKey: "支付宝公钥",
     gateway: "网关（默认 openapi.alipay.com）",
   },
+  wechat: {
+    appId: "AppID（公众号/服务号）",
+    mchId: "商户号 MchID",
+    apiV3Key: "APIv3 密钥（32 字符）",
+    serialNo: "商户证书序列号",
+    privateKey: "商户 API 私钥（可粘贴无头尾 base64）",
+  },
   stripe: { secretKey: "Secret Key", webhookSecret: "Webhook Secret", currency: "计费货币（默认 usd）" },
   // 沙箱无凭据字段，仅启停开关
   mock: {},
 };
+
+/** 站点与 OAuth 登录：保存于 system:config，优先于环境变量，即时生效 */
+const SITE_FIELDS: { key: string; label: string; placeholder?: string }[] = [
+  { key: "app_base_url", label: "站点对外地址", placeholder: "https://live.example.com（支付回调 / 播放地址基于此生成）" },
+];
+
+const OAUTH_FIELDS: { key: string; label: string; placeholder?: string }[] = [
+  { key: "oauth_provider_name", label: "提供方名称", placeholder: "如 LinuxDO（登录按钮展示名）" },
+  { key: "oauth_client_id", label: "Client ID" },
+  { key: "oauth_client_secret", label: "Client Secret" },
+  { key: "oauth_auth_url", label: "授权地址 Auth URL", placeholder: "https://…/oauth2/authorize" },
+  { key: "oauth_token_url", label: "令牌地址 Token URL", placeholder: "https://…/oauth2/token" },
+  { key: "oauth_userinfo_url", label: "用户信息地址 UserInfo URL", placeholder: "https://…/api/user" },
+  { key: "oauth_redirect_uri", label: "回调地址（留空自动推导）", placeholder: "{站点地址}/api/auth/oauth-callback" },
+];
 
 export default function AdminSettings() {
   const [features, setFeatures] = useState<Features | null>(null);
@@ -148,6 +171,43 @@ export default function AdminSettings() {
           </div>
           <button className="btn btn-primary" onClick={saveConfig}>
             保存配置
+          </button>
+        </div>
+        <div className="card" style={{ gridColumn: "1 / -1" }}>
+          <h3>站点与 OAuth 登录</h3>
+          <p className="muted small" style={{ margin: "0 0 12px" }}>
+            保存在数据库并即时生效，优先于环境变量；留空表示回退环境变量默认值。
+            除 REDIS_URL / JWT_SECRET / PORT 等启动必需项外，业务配置均可在此设置。
+          </p>
+          {SITE_FIELDS.map((f) => (
+            <div className="field" key={f.key} style={{ maxWidth: 520 }}>
+              <label>{f.label}</label>
+              <input
+                className="input"
+                value={config[f.key] ?? ""}
+                placeholder={f.placeholder}
+                spellCheck={false}
+                onChange={(e) => setConfig({ ...config, [f.key]: e.target.value })}
+              />
+            </div>
+          ))}
+          <h4 style={{ margin: "16px 0 8px", fontSize: 14 }}>OAuth 第三方登录</h4>
+          <div className="grid grid-3">
+            {OAUTH_FIELDS.map((f) => (
+              <div className="field" key={f.key}>
+                <label>{f.label}</label>
+                <input
+                  className="input"
+                  value={config[f.key] ?? ""}
+                  placeholder={f.placeholder}
+                  spellCheck={false}
+                  onChange={(e) => setConfig({ ...config, [f.key]: e.target.value })}
+                />
+              </div>
+            ))}
+          </div>
+          <button className="btn btn-primary" onClick={saveConfig}>
+            保存站点与登录配置
           </button>
         </div>
         <div className="card" style={{ gridColumn: "1 / -1" }}>

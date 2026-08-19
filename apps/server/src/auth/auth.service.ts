@@ -190,38 +190,43 @@ export class AuthService {
     return { guestId: `g_${randomUUID()}` };
   }
 
-  /** OAuth 是否已配置（前端据此决定是否展示入口）*/
-  oauthStatus(): { enabled: boolean; name: string } {
+  /** OAuth 是否已配置（前端据此决定是否展示入口；后台面板配置优先） */
+  async oauthStatus(): Promise<{ enabled: boolean; name: string }> {
+    const { getOAuthConfig } = await import("../common/runtime-config");
+    const oauth = await getOAuthConfig();
     return {
-      enabled: Boolean(config.oauthClientId && config.oauthAuthUrl),
-      name: config.oauthProviderName,
+      enabled: Boolean(oauth.clientId && oauth.authUrl),
+      name: oauth.providerName,
     };
   }
 
   async oauthAuthorizeUrl(redirect: string): Promise<string> {
-    const base = config.oauthAuthUrl;
-    if (!config.oauthClientId || !base) {
+    const { getOAuthConfig } = await import("../common/runtime-config");
+    const oauth = await getOAuthConfig();
+    if (!oauth.clientId || !oauth.authUrl) {
       throw new BizException(ErrorCode.INTERNAL, "OAuth 未配置");
     }
     const params = new URLSearchParams({
-      client_id: config.oauthClientId,
-      redirect_uri: config.oauthRedirectUri,
+      client_id: oauth.clientId,
+      redirect_uri: oauth.redirectUri,
       response_type: "code",
       scope: "read",
       state: encodeURIComponent(redirect || "/"),
     });
-    return `${base}?${params.toString()}`;
+    return `${oauth.authUrl}?${params.toString()}`;
   }
 
   async oauthLogin(code: string): Promise<{ user: ReturnType<typeof toProfile>; token: string }> {
-    const tokenRes = await fetch(config.oauthTokenUrl, {
+    const { getOAuthConfig } = await import("../common/runtime-config");
+    const oauth = await getOAuthConfig();
+    const tokenRes = await fetch(oauth.tokenUrl, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
-        client_id: config.oauthClientId,
-        client_secret: config.oauthClientSecret,
+        client_id: oauth.clientId,
+        client_secret: oauth.clientSecret,
         code,
-        redirect_uri: config.oauthRedirectUri,
+        redirect_uri: oauth.redirectUri,
         grant_type: "authorization_code",
       }),
     });
@@ -229,7 +234,7 @@ export class AuthService {
     if (!tokenData.access_token) {
       throw new BizException(ErrorCode.UNAUTHORIZED, "OAuth 授权失败", 401);
     }
-    const infoRes = await fetch(config.oauthUserInfoUrl, {
+    const infoRes = await fetch(oauth.userInfoUrl, {
       headers: { Authorization: `Bearer ${tokenData.access_token}` },
     });
     const info = (await infoRes.json()) as {

@@ -18,6 +18,7 @@ import {
 } from "@starlive/shared";
 import { BizException } from "../common/errors";
 import { redis } from "../common/redis";
+import { getAppBaseUrl } from "../common/runtime-config";
 import { config } from "../config/config";
 
 /** 网关配置：后台写入的 Redis(payment:config:{provider}) 优先，环境变量兜底 */
@@ -64,7 +65,7 @@ class MockProvider implements PaymentProvider {
     // 沙箱：跳回充值页，由订单同步接口按 queryOrder()=paid 直接入账
     return {
       type: "url",
-      payload: `${config.appBaseUrl}/recharge?order=${order.orderId}`,
+      payload: `${await getAppBaseUrl()}/recharge?order=${order.orderId}`,
     };
   }
 
@@ -125,12 +126,13 @@ class EpayProvider implements PaymentProvider {
     subject: string;
   }): Promise<PayResult> {
     const { pid, key, gateway } = await this.loadConfig();
+    const base = await getAppBaseUrl();
     const params: Record<string, string> = {
       pid,
       type: "alipay",
       out_trade_no: order.orderId,
-      notify_url: `${config.appBaseUrl}/api/payment/callback/epay`,
-      return_url: `${config.appBaseUrl}/recharge?order=${order.orderId}`,
+      notify_url: `${base}/api/payment/callback/epay`,
+      return_url: `${base}/recharge?order=${order.orderId}`,
       name: order.subject,
       money: order.amount.toFixed(2),
       sign_type: "MD5",
@@ -301,6 +303,7 @@ class AlipayProvider implements PaymentProvider {
     subject: string;
   }): Promise<PayResult> {
     const cfg = await this.loadConfig();
+    const base = await getAppBaseUrl();
     const params = this.buildParams(
       cfg,
       "alipay.trade.page.pay",
@@ -311,8 +314,8 @@ class AlipayProvider implements PaymentProvider {
         product_code: "FAST_INSTANT_TRADE_PAY",
       },
       {
-        notify_url: `${config.appBaseUrl}/api/payment/callback/alipay`,
-        return_url: `${config.appBaseUrl}/recharge?order=${order.orderId}`,
+        notify_url: `${base}/api/payment/callback/alipay`,
+        return_url: `${base}/recharge?order=${order.orderId}`,
       },
     );
 
@@ -450,6 +453,7 @@ class StripeProvider implements PaymentProvider {
     subject: string;
   }): Promise<PayResult> {
     const { currency } = await this.loadConfig();
+    const base = await getAppBaseUrl();
     const session = await this.api<{ id: string; url: string }>("/checkout/sessions", {
       mode: "payment",
       client_reference_id: order.orderId,
@@ -458,8 +462,8 @@ class StripeProvider implements PaymentProvider {
       "line_items[0][price_data][currency]": currency,
       "line_items[0][price_data][unit_amount]": String(Math.round(order.amount * 100)),
       "line_items[0][price_data][product_data][name]": order.subject,
-      success_url: `${config.appBaseUrl}/recharge?order=${order.orderId}`,
-      cancel_url: `${config.appBaseUrl}/recharge`,
+      success_url: `${base}/recharge?order=${order.orderId}`,
+      cancel_url: `${base}/recharge`,
     });
     return { type: "url", payload: session.url, providerRef: session.id };
   }
@@ -627,7 +631,7 @@ class WechatProvider implements PaymentProvider {
       mchid: cfg.mchId,
       description: order.subject,
       out_trade_no: order.orderId,
-      notify_url: `${config.appBaseUrl}/api/payment/callback/wechat`,
+      notify_url: `${await getAppBaseUrl()}/api/payment/callback/wechat`,
       amount: { total: Math.round(order.amount * 100), currency: "CNY" },
     });
     if (!r.code_url) throw new BizException(5000, "微信支付下单失败：未返回 code_url");
