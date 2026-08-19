@@ -134,7 +134,15 @@ export class AuthController {
     @Query("code") code: string,
     @Query("state") state: string,
     @Res() res: Response,
+    @Query("error") error?: string,
+    @Query("error_description") errorDescription?: string,
   ) {
+    // 授权阶段被 Provider 拒绝（如 unauthorized_client）：透传真实错误便于排查
+    if (error) {
+      const msg = `OAuth 授权被拒绝：${errorDescription || error}`;
+      res.redirect(`/login?oauth_error=${encodeURIComponent(msg)}`);
+      return;
+    }
     try {
       const { token } = await this.auth.oauthLogin(code);
       setSessionCookie(res, token);

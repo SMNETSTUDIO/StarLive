@@ -219,20 +219,26 @@ export class AuthService {
   async oauthLogin(code: string): Promise<{ user: ReturnType<typeof toProfile>; token: string }> {
     const { getOAuthConfig } = await import("../common/runtime-config");
     const oauth = await getOAuthConfig();
+    // OAuth2 标准要求 token 端点用 form-urlencoded（linux.do 等不解析 JSON body）
     const tokenRes = await fetch(oauth.tokenUrl, {
       method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
         client_id: oauth.clientId,
         client_secret: oauth.clientSecret,
         code,
         redirect_uri: oauth.redirectUri,
         grant_type: "authorization_code",
-      }),
+      }).toString(),
     });
-    const tokenData = (await tokenRes.json()) as { access_token?: string };
+    const tokenData = (await tokenRes.json().catch(() => ({}))) as {
+      access_token?: string;
+      error?: string;
+      error_description?: string;
+    };
     if (!tokenData.access_token) {
-      throw new BizException(ErrorCode.UNAUTHORIZED, "OAuth 授权失败", 401);
+      const detail = tokenData.error_description || tokenData.error || `HTTP ${tokenRes.status}`;
+      throw new BizException(ErrorCode.UNAUTHORIZED, `OAuth 授权失败：${detail}`, 401);
     }
     const infoRes = await fetch(oauth.userInfoUrl, {
       headers: { Authorization: `Bearer ${tokenData.access_token}` },
