@@ -174,5 +174,8 @@ pnpm test         # 单元测试（Vitest）unit tests
 
 ## 许可证 License
 
-**Private repository** — 版权所有，未经授权请勿分发。
-All rights reserved. Do not distribute without authorization.
+[Apache-2.0 with Commons Clause](LICENSE)
+
+**禁止商用与转卖**：仅允许个人/非商业使用；不得以任何形式收取费用、提供付费托管/咨询服务，或将本代码用于商业产品转售。详见 [LICENSE](LICENSE)。
+
+**No commercial use / no resale**: personal & non-commercial use only. You may not charge fees, offer paid hosting/support, or resell the code in commercial products. See [LICENSE](LICENSE).
