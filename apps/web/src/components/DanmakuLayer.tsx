@@ -5,7 +5,14 @@ const LANES = 12;
 const DURATION_S = 10;
 const HISTORY_MAX = 15;
 
-export default function DanmakuLayer({ messages }: { messages: DanmakuMessage[] }) {
+export default function DanmakuLayer({
+  messages,
+  visible = true,
+}: {
+  messages: DanmakuMessage[];
+  /** 用 visibility 隐藏而非卸载：卸载重挂会重置进房时间戳导致历史弹幕重放 */
+  visible?: boolean;
+}) {
   const mountTs = useRef(Date.now());
   const laneOf = useRef(new Map<string, number>());
   const nextLane = useRef(0);
@@ -36,7 +43,7 @@ export default function DanmakuLayer({ messages }: { messages: DanmakuMessage[] 
   }
 
   return (
-    <div className="danmaku-layer">
+    <div className="danmaku-layer" style={visible ? undefined : { visibility: "hidden" }}>
       {all.map((m) => (
         <div
           key={m.id}

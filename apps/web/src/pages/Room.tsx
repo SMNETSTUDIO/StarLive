@@ -546,7 +546,7 @@ export default function Room() {
               danmakuOn={danmakuOn}
               onToggleDanmaku={() => setDanmakuOn((v) => !v)}
             >
-              {danmakuOn && <DanmakuLayer messages={messages} />}
+              <DanmakuLayer messages={messages} visible={danmakuOn} />
               <GiftEffectLayer effects={giftFx} />
             </Player>
           ) : (
