@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { useAuth, type User } from "../context/AuthContext";
-import { get, post } from "../lib/api";
+import { API_BASE, get, post } from "../lib/api";
 
 interface Balance {
   coins: number;
@@ -49,9 +49,17 @@ export default function Profile() {
   const [followings, setFollowings] = useState<FollowingItem[]>([]);
   const [msg, setMsg] = useState("");
   const [error, setError] = useState("");
+  const [oauth, setOauth] = useState<{ enabled: boolean; name: string } | null>(null);
+  const [bind, setBind] = useState<{ bound: boolean; boundName: string } | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const loadFollowings = () =>
     get<FollowingItem[]>("/room/following").then(setFollowings).catch(() => undefined);
+
+  const loadBind = () =>
+    get<{ bound: boolean; boundName: string }>("/auth/oauth-bind-status")
+      .then(setBind)
+      .catch(() => undefined);
 
   useEffect(() => {
     if (!user) return;
@@ -63,7 +71,22 @@ export default function Profile() {
   useEffect(() => {
     get<Balance>("/balance").then(setBalance).catch(() => undefined);
     get<Tx[]>("/balance/transactions?limit=20").then(setTxs).catch(() => undefined);
+    get<{ enabled: boolean; name: string }>("/auth/oauth-status").then(setOauth).catch(() => undefined);
     void loadFollowings();
+    void loadBind();
+  }, []);
+
+  // OAuth 绑定回跳结果提示
+  useEffect(() => {
+    const ok = searchParams.get("oauth_bind");
+    const err = searchParams.get("oauth_bind_error");
+    if (!ok && !err) return;
+    if (ok) setMsg("OAuth 账号绑定成功");
+    if (err) setError(err);
+    searchParams.delete("oauth_bind");
+    searchParams.delete("oauth_bind_error");
+    setSearchParams(searchParams, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const unfollow = async (targetUserId: string) => {
@@ -225,6 +248,43 @@ export default function Profile() {
               修改密码
             </button>
           </form>
+
+          {/* OAuth 账号绑定 */}
+          {oauth?.enabled && (
+            <div style={{ marginTop: 18, paddingTop: 14, borderTop: "1px solid var(--border)" }}>
+              <h3 style={{ fontSize: 16 }}>🔗 {oauth.name} 绑定</h3>
+              {bind?.bound ? (
+                <div className="flex between" style={{ gap: 10 }}>
+                  <span className="small">
+                    已绑定{bind.boundName ? <>：<b>{bind.boundName}</b></> : null}
+                    <span className="muted">（可直接用 {oauth.name} 登录本账号）</span>
+                  </span>
+                  <button
+                    className="btn btn-sm btn-ghost"
+                    onClick={async () => {
+                      if (!confirm(`确认解绑 ${oauth.name}？解绑后需用密码登录`)) return;
+                      try {
+                        await post("/auth/oauth-unbind");
+                        flash("已解绑");
+                        void loadBind();
+                      } catch (err) {
+                        setError((err as Error).message);
+                      }
+                    }}
+                  >
+                    解绑
+                  </button>
+                </div>
+              ) : (
+                <div className="flex between" style={{ gap: 10 }}>
+                  <span className="small muted">绑定后可用 {oauth.name} 一键登录本账号</span>
+                  <a className="btn btn-sm" href={`${API_BASE}/api/auth/oauth-bind-initiate`}>
+                    去绑定
+                  </a>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 

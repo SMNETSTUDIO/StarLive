@@ -216,7 +216,11 @@ export class AuthService {
     return `${oauth.authUrl}?${params.toString()}`;
   }
 
-  async oauthLogin(code: string): Promise<{ user: ReturnType<typeof toProfile>; token: string }> {
+  /** 用授权码换取 OAuth 身份（token 交换 + 用户信息） */
+  private async fetchOAuthIdentity(code: string): Promise<{
+    oauthId: string;
+    info: { id?: number | string; username?: string; name?: string; avatar_url?: string; email?: string };
+  }> {
     const { getOAuthConfig } = await import("../common/runtime-config");
     const oauth = await getOAuthConfig();
     // OAuth2 标准要求 token 端点用 form-urlencoded（linux.do 等不解析 JSON body）
@@ -254,22 +258,40 @@ export class AuthService {
     if (!oauthId) {
       throw new BizException(ErrorCode.UNAUTHORIZED, "OAuth 用户信息缺失", 401);
     }
-    const username = `oauth_${oauthId}`;
-    let user = await getUserByUsername(username);
+    return { oauthId, info };
+  }
+
+  async oauthLogin(code: string): Promise<{ user: ReturnType<typeof toProfile>; token: string }> {
+    const { oauthId, info } = await this.fetchOAuthIdentity(code);
+
+    // 1) 绑定索引优先：已绑定的注册账号直接登录
+    const boundId = await redis().get(Keys.oauthUid(oauthId));
+    let user = boundId ? await getUserById(boundId) : null;
+
+    // 2) 兼容历史 oauth_ 独立账号，并回填索引
     if (!user) {
-      // OAuth 首次登录会创建新账号，同样受「开放注册」开关约束（已有账号不受影响）
+      const username = `oauth_${oauthId}`;
+      user = await getUserByUsername(username);
+      if (user) await redis().set(Keys.oauthUid(oauthId), user.id);
+    }
+
+    // 3) 都没有则创建新账号（受「开放注册」开关约束，已有账号不受影响）
+    if (!user) {
       const regFlag = await redis().hget(Keys.systemFeatures, "registrationEnabled");
       if (regFlag === "false" || regFlag === "0") {
         throw new BizException(ErrorCode.FORBIDDEN, "注册已关闭，请联系管理员", 403);
       }
+      const username = `oauth_${oauthId}`;
       user = await createUser({
         username,
         name: info.name ?? info.username ?? username,
         email: info.email,
         passwordHash: "",
       });
+      await redis().set(Keys.oauthUid(oauthId), user.id);
+      await setUserField(user.id, "oauthId", oauthId);
+      await setUserField(user.id, "oauthName", info.username ?? info.name ?? "");
       if (info.avatar_url) {
-        const { setUserField } = await import("../common/user-store");
         await setUserField(user.id, "avatarUrl", info.avatar_url);
       }
     }
@@ -282,5 +304,82 @@ export class AuthService {
       permissions: admin.permissions,
     });
     return { user: toProfile(user), token };
+  }
+
+  /** 发起绑定：生成一次性 nonce（防 CSRF 绑定劫持），跳转授权页 */
+  async oauthBindUrl(userId: string): Promise<string> {
+    const { getOAuthConfig } = await import("../common/runtime-config");
+    const oauth = await getOAuthConfig();
+    if (!oauth.clientId || !oauth.authUrl) {
+      throw new BizException(ErrorCode.INTERNAL, "OAuth 未配置");
+    }
+    const nonce = randomUUID().replace(/-/g, "");
+    await redis().set(Keys.oauthBindNonce(nonce), userId, "EX", 600);
+    const params = new URLSearchParams({
+      client_id: oauth.clientId,
+      redirect_uri: oauth.redirectUri,
+      response_type: "code",
+      scope: "read",
+      state: `bind:${nonce}`,
+    });
+    return `${oauth.authUrl}?${params.toString()}`;
+  }
+
+  /** 完成绑定：nonce 换回发起用户，将 OAuth 身份挂到该账号 */
+  async oauthBind(code: string, nonce: string): Promise<void> {
+    const key = Keys.oauthBindNonce(nonce);
+    const userId = await redis().get(key);
+    if (!userId) {
+      throw new BizException(ErrorCode.UNAUTHORIZED, "绑定会话已过期，请重新发起", 401);
+    }
+    await redis().del(key);
+
+    const user = await getUserById(userId);
+    if (!user) throw new BizException(ErrorCode.NOT_FOUND, "用户不存在", 404);
+
+    const { oauthId, info } = await this.fetchOAuthIdentity(code);
+
+    const existing = await redis().get(Keys.oauthUid(oauthId));
+    if (existing && existing !== userId) {
+      throw new BizException(ErrorCode.FORBIDDEN, "该 OAuth 账号已绑定其他用户", 403);
+    }
+    // 该 OAuth 身份已有历史独立账号（oauth_xxx）时禁止绑定，避免一个身份两个账号
+    const legacy = await getUserByUsername(`oauth_${oauthId}`);
+    if (legacy && legacy.id !== userId) {
+      throw new BizException(ErrorCode.FORBIDDEN, "该 OAuth 账号已有独立账号，请直接用它登录", 403);
+    }
+
+    // 换绑：清掉本账号旧的 OAuth 索引
+    const prevOauthId = (user as { oauthId?: string }).oauthId;
+    if (prevOauthId && prevOauthId !== oauthId) {
+      await redis().del(Keys.oauthUid(prevOauthId));
+    }
+    await redis().set(Keys.oauthUid(oauthId), userId);
+    await setUserField(userId, "oauthId", oauthId);
+    await setUserField(userId, "oauthName", info.username ?? info.name ?? "");
+  }
+
+  async oauthBindStatus(userId: string): Promise<{ bound: boolean; boundName: string }> {
+    const user = await getUserById(userId);
+    const raw = user as { oauthId?: string; oauthName?: string } | null;
+    return {
+      bound: Boolean(raw?.oauthId),
+      boundName: raw?.oauthName ?? "",
+    };
+  }
+
+  async oauthUnbind(userId: string): Promise<{ ok: boolean }> {
+    const user = await getUserById(userId);
+    const raw = user as ({ oauthId?: string } & typeof user) | null;
+    if (!raw?.oauthId) {
+      throw new BizException(ErrorCode.NOT_FOUND, "当前未绑定 OAuth 账号", 404);
+    }
+    // 没有密码的账号解绑后将无法登录，先设置密码
+    if (!user?.passwordHash) {
+      throw new BizException(ErrorCode.FORBIDDEN, "请先在下方设置登录密码，再解绑", 403);
+    }
+    await redis().del(Keys.oauthUid(raw.oauthId));
+    await redis().hdel(Keys.user(userId), "oauthId", "oauthName");
+    return { ok: true };
   }
 }

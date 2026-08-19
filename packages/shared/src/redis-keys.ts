@@ -7,6 +7,10 @@ export const Keys = {
   usersSet: "users:set",
   userByUsername: (username: string) => `user:index:username:${username.toLowerCase()}`,
   userByEmail: (email: string) => `user:index:email:${email.toLowerCase()}`,
+  // OAuth 身份 → 用户 ID（绑定关系索引）
+  oauthUid: (oauthId: string) => `oauth:uid:${oauthId}`,
+  // 绑定流程一次性 nonce（防 CSRF 绑定劫持）
+  oauthBindNonce: (nonce: string) => `oauth:bind:nonce:${nonce}`,
   userBalance: (id: string) => `user:balance:${id}`,
   userTransaction: (id: string, txId: string) => `user:transaction:${id}:${txId}`,
   userTransactionsIndex: (id: string) => `user:transactions:index:${id}`,

@@ -129,6 +129,26 @@ export class AuthController {
     res.redirect(url);
   }
 
+  /** 发起绑定：登录用户将 OAuth 身份绑到当前账号 */
+  @Get("oauth-bind-initiate")
+  @UseGuards(AuthGuard)
+  async oauthBindInitiate(@Req() req: AuthedRequest, @Res() res: Response) {
+    const url = await this.auth.oauthBindUrl(req.user!.sub);
+    res.redirect(url);
+  }
+
+  @Get("oauth-bind-status")
+  @UseGuards(AuthGuard)
+  oauthBindStatus(@Req() req: AuthedRequest) {
+    return this.auth.oauthBindStatus(req.user!.sub);
+  }
+
+  @Post("oauth-unbind")
+  @UseGuards(AuthGuard)
+  oauthUnbind(@Req() req: AuthedRequest) {
+    return this.auth.oauthUnbind(req.user!.sub);
+  }
+
   @Get("oauth-callback")
   async oauthCallback(
     @Query("code") code: string,
@@ -137,12 +157,31 @@ export class AuthController {
     @Query("error") error?: string,
     @Query("error_description") errorDescription?: string,
   ) {
+    const isBind = Boolean(state?.startsWith("bind:"));
+    const errPage = (msg: string) =>
+      res.redirect(
+        isBind
+          ? `/profile?oauth_bind_error=${encodeURIComponent(msg)}`
+          : `/login?oauth_error=${encodeURIComponent(msg)}`,
+      );
+
     // 授权阶段被 Provider 拒绝（如 unauthorized_client）：透传真实错误便于排查
     if (error) {
-      const msg = `OAuth 授权被拒绝：${errorDescription || error}`;
-      res.redirect(`/login?oauth_error=${encodeURIComponent(msg)}`);
+      errPage(`OAuth 授权被拒绝：${errorDescription || error}`);
       return;
     }
+
+    // 绑定回调：state 携带一次性 nonce，找回发起用户
+    if (isBind) {
+      try {
+        await this.auth.oauthBind(code, state.slice("bind:".length));
+        res.redirect("/profile?oauth_bind=ok");
+      } catch (e) {
+        errPage(e instanceof Error ? e.message : "绑定失败");
+      }
+      return;
+    }
+
     try {
       const { token } = await this.auth.oauthLogin(code);
       setSessionCookie(res, token);
