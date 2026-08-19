@@ -9,7 +9,7 @@ Streams via self-hosted **MediaMTX**, real-time via **Socket.IO**, data in **Red
 
 [功能 Features](#功能-features) · [架构 Architecture](#架构-architecture) · [快速开始 Quick Start](#快速开始-quick-start) · [配置 Configuration](#配置-configuration) · [文档 Docs](#文档-docs) · [许可证 License](#许可证-license)
 
-[![CI](https://github.com/SMNETSTUDIO/StarLive/actions/workflows/ci.yml/badge.svg)](https://github.com/SMNETSTUDIO/StarLive/actions/workflows/ci.yml) [![Docker](https://github.com/SMNETSTUDIO/StarLive/actions/workflows/docker.yml/badge.svg)](https://github.com/SMNETSTUDIO/StarLive/actions/workflows/docker.yml) [![community](https://github.com/user-attachments/assets/653f2b6b-ee32-4f0f-abe0-1ba96e4bb473)](https://linux.do/) [![Telegram Group](https://img.shields.io/badge/Telegram-Group-blue?logo=telegram&style=flat)](https://t.me/smnet_group)
+[![CI](https://github.com/SMNETSTUDIO/StarLive/actions/workflows/ci.yml/badge.svg)](https://github.com/SMNETSTUDIO/StarLive/actions/workflows/ci.yml) [![Docker](https://github.com/SMNETSTUDIO/StarLive/actions/workflows/docker.yml/badge.svg)](https://github.com/SMNETSTUDIO/StarLive/actions/workflows/docker.yml) [![community](https://github.com/user-attachments/assets/653f2b6b-ee32-4f0f-abe0-1ba96e4bb473)](https://linux.do/) [![Telegram Group](https://img.shields.io/badge/Telegram-Group-blue?logo=telegram&style=flat)](https://t.me/smnet_group/107110)
 
 </div>
 
