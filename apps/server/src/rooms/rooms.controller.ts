@@ -87,6 +87,12 @@ export class RoomsController {
     return this.rooms.updateAnnouncement(body.roomId, req.user!.sub, body.announcement);
   }
 
+  @Post("stream-reset")
+  @UseGuards(AuthGuard)
+  resetStream(@Req() req: AuthedRequest, @Body() body: { roomId: string }) {
+    return this.rooms.resetStream(body.roomId, req.user!.sub);
+  }
+
   @Delete("delete")
   @UseGuards(AuthGuard)
   remove(@Req() req: AuthedRequest, @Body() body: { roomId: string }) {

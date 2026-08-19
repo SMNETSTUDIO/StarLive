@@ -50,7 +50,8 @@ export class RoomsService {
     if (!roomId) roomId = genId("room_");
     if (await getRoom(roomId)) roomId = `${roomId}_${randomBytes(3).toString("hex")}`;
 
-    const streamInfo = await this.stream.createStream({ title, roomId });
+    const provider = await this.stream.getProvider();
+    const streamInfo = await provider.createStream({ title, roomId });
     const now = Date.now();
     const room: Record<string, string> = {
       id: roomId,
@@ -65,7 +66,7 @@ export class RoomsService {
       streamKey: streamInfo.streamKey,
       playbackId: streamInfo.playbackId,
       playbackUrl: streamInfo.playbackUrl ?? "",
-      provider: this.stream.provider.name,
+      provider: provider.name,
       banned: "false",
       createdAt: String(now),
     };
@@ -103,11 +104,11 @@ export class RoomsService {
 
     const counts = await countViewers(roomId);
 
-    // 实时同步推流状态（自建 MediaMTX 通过 API 轮询，带缓存降级）
+    // 实时同步推流状态（按房间创建时的 Provider 轮询，带缓存降级）
     let status = room.status;
-    if (room.streamId && this.stream.provider.name === "selfhosted") {
+    if (room.streamId) {
       try {
-        status = (await this.stream.getStream(room.streamId)).status;
+        status = (await this.stream.getStream(room.streamId, room.provider)).status;
         if (status !== room.status) await setRoomStatus(roomId, status);
       } catch {
         status = room.status;
@@ -139,7 +140,7 @@ export class RoomsService {
     if (ids.length === 0) return [];
 
     const rows = await redisPipeline<string[]>((p) => {
-      for (const id of ids) p.hmget(Keys.room(id), "id", "title", "ownerId", "isPublic", "category", "status", "announcement", "playbackUrl", "banned", "createdAt", "streamId");
+      for (const id of ids) p.hmget(Keys.room(id), "id", "title", "ownerId", "isPublic", "category", "status", "announcement", "playbackUrl", "banned", "createdAt", "streamId", "provider");
     });
 
     const rooms = rows
@@ -155,16 +156,17 @@ export class RoomsService {
         banned: r[8] === "true",
         createdAt: Number(r[9] ?? 0),
         streamId: r[10],
+        provider: r[11] ?? undefined,
         _roomId: ids[i],
       }))
       .filter((rm) => !rm.banned && (opts.mine || rm.isPublic || rm.status === "active"));
 
     const out: Array<Record<string, unknown>> = [];
     for (const rm of rooms) {
-      // 仅对已开播房间刷新真实推流状态（带缓存，成本可控）
-      if (rm.streamId && rm.status === "active" && this.stream.provider.name === "selfhosted") {
+      // 仅对已开播房间刷新真实推流状态（按房间自身 Provider，带缓存，成本可控）
+      if (rm.streamId && rm.status === "active") {
         try {
-          rm.status = (await this.stream.getStream(rm.streamId)).status;
+          rm.status = (await this.stream.getStream(rm.streamId, rm.provider)).status;
           if (rm.status !== "active") await setRoomStatus(rm._roomId, rm.status as "idle" | "active");
         } catch {
           /* keep */
@@ -219,9 +221,52 @@ export class RoomsService {
     return { ok: true };
   }
 
+  /**
+   * 重置推流：把房间迁移到当前全局配置的直播流服务。
+   * 重新生成推流密钥与播放地址（OBS 需更新配置），直播中不可操作。
+   */
+  async resetStream(roomId: string, userId: string) {
+    const room = await this.requireOwnership(roomId, userId);
+    if (room.status === "active") {
+      throw new BizException(ErrorCode.INVALID_AMOUNT, "直播进行中，请先停止推流再重置");
+    }
+
+    const provider = await this.stream.getProvider();
+    const info = await provider.createStream({ title: room.title, roomId });
+
+    // 新流建好后再清旧流与旧密钥映射（失败不阻断迁移）
+    if (room.streamKey) {
+      try {
+        await this.stream.deleteStream(room.streamId ?? room.streamKey, room.provider);
+      } catch {
+        /* ignore */
+      }
+      await redis().del(`stream:key:${room.streamKey}`);
+    }
+
+    await redisPipeline((p) => {
+      p.hset(Keys.room(roomId), {
+        streamId: info.streamId,
+        streamKey: info.streamKey,
+        playbackId: info.playbackId,
+        playbackUrl: info.playbackUrl ?? "",
+        provider: provider.name,
+        status: "idle",
+      });
+    });
+    await bindStreamKey(info.streamKey, roomId);
+
+    return {
+      ok: true,
+      provider: provider.name,
+      streamKey: info.streamKey,
+      playbackUrl: info.playbackUrl ?? "",
+    };
+  }
+
   async remove(roomId: string, userId: string) {
     const room = await this.requireOwnership(roomId, userId);
-    if (room.streamKey) await this.stream.deleteStream(room.streamId ?? room.streamKey);
+    if (room.streamKey) await this.stream.deleteStream(room.streamId ?? room.streamKey, room.provider);
     const r = redis();
     await redisPipeline((p) => {
       p.del(Keys.room(roomId));

@@ -17,6 +17,9 @@ const ENV_FALLBACK: Record<string, string> = {
   oauth_auth_url: config.oauthAuthUrl,
   oauth_token_url: config.oauthTokenUrl,
   oauth_userinfo_url: config.oauthUserInfoUrl,
+  stream_provider: config.streamProvider,
+  mux_token_id: config.muxTokenId,
+  mux_token_secret: config.muxTokenSecret,
 };
 
 async function loadAll(): Promise<Record<string, string>> {

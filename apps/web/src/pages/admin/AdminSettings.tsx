@@ -211,6 +211,50 @@ export default function AdminSettings() {
           </button>
         </div>
         <div className="card" style={{ gridColumn: "1 / -1" }}>
+          <h3>直播流服务</h3>
+          <p className="muted small" style={{ margin: "0 0 12px" }}>
+            切换只影响<b>新建房间</b>；已有房间沿用创建时的服务，推流/播放不受影响。
+            自建（MediaMTX）走本机 RTMP :1935 + 同源 /hls 播放；Mux 推流到
+            rtmps://global-live.mux.com，播放走 stream.mux.com，需填 Access Token。
+          </p>
+          <div className="grid grid-3">
+            <div className="field">
+              <label>服务提供方</label>
+              <select
+                className="select"
+                value={config.stream_provider ?? ""}
+                onChange={(e) => setConfig({ ...config, stream_provider: e.target.value })}
+              >
+                <option value="">（跟随环境变量，默认自建）</option>
+                <option value="selfhosted">自建 MediaMTX</option>
+                <option value="mux">Mux</option>
+              </select>
+            </div>
+            <div className="field">
+              <label>Mux Token ID</label>
+              <input
+                className="input"
+                value={config.mux_token_id ?? ""}
+                spellCheck={false}
+                onChange={(e) => setConfig({ ...config, mux_token_id: e.target.value })}
+              />
+            </div>
+            <div className="field">
+              <label>Mux Token Secret</label>
+              <input
+                className="input"
+                type="password"
+                value={config.mux_token_secret ?? ""}
+                spellCheck={false}
+                onChange={(e) => setConfig({ ...config, mux_token_secret: e.target.value })}
+              />
+            </div>
+          </div>
+          <button className="btn btn-primary" onClick={saveConfig}>
+            保存直播流配置
+          </button>
+        </div>
+        <div className="card" style={{ gridColumn: "1 / -1" }}>
           <h3>支付网关</h3>
           <p className="muted small" style={{ margin: "0 0 12px" }}>
             各网关相互独立，可同时启用任意多个；配置保存在数据库并即时生效，优先于环境变量；

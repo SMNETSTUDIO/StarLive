@@ -28,7 +28,7 @@ export class RecordingService {
     let remote: RecordingAsset[] = [];
     if (room.streamId) {
       try {
-        remote = await this.stream.listRecordings(room.streamId);
+        remote = await this.stream.listRecordings(room.streamId, room.provider);
       } catch {
         remote = [];
       }

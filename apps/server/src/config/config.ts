@@ -41,6 +41,8 @@ export const config = {
   streamProvider: env("STREAM_PROVIDER", "selfhosted"),
   mediamtxApi: env("MEDIAMTX_API", "http://localhost:9997"),
   mediamtxAuthHook: env("MEDIAMTX_AUTH_HOOK", "http://localhost:3000/api/stream/hook"),
+  muxTokenId: env("MUX_TOKEN_ID", ""),
+  muxTokenSecret: env("MUX_TOKEN_SECRET", ""),
 
   ffmpegPath: env("FFMPEG_PATH", "ffmpeg"),
   recordingDir: env("RECORDING_DIR", "./recordings"),

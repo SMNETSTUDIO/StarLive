@@ -28,6 +28,7 @@ interface RoomData {
   status: string;
   playbackUrl?: string;
   streamKey?: string;
+  provider?: string;
   viewerCount: number;
   registeredCount: number;
   guestCount: number;
@@ -61,12 +62,17 @@ export default function Room() {
   const [moderatorIds, setModeratorIds] = useState<string[]>([]);
   const [muteTarget, setMuteTarget] = useState<DanmakuMessage | null>(null);
   const [mutedUntil, setMutedUntil] = useState(0);
+  const [resetting, setResetting] = useState(false);
+  const [resetMsg, setResetMsg] = useState("");
   const messagesRef = useRef<DanmakuMessage[]>([]);
 
   const isOwner = user?.id === room?.ownerId;
   const canModerate = isOwner || (!!user && moderatorIds.includes(user.id));
-  // 按当前访问域名生成推流地址（MediaMTX RTMP 端口 1935）
-  const rtmpUrl = `rtmp://${window.location.hostname}:1935`;
+  // 推流地址：Mux 房间用官方 RTMPS 入口；自建按当前访问域名（MediaMTX :1935）
+  const rtmpUrl =
+    room?.provider === "mux"
+      ? "rtmps://global-live.mux.com:443/app"
+      : `rtmp://${window.location.hostname}:1935`;
 
   const appendMessage = useCallback((m: DanmakuMessage) => {
     messagesRef.current = [...messagesRef.current.slice(-200), m];
@@ -338,6 +344,38 @@ export default function Room() {
     }
   };
 
+  // 重置推流：迁移到后台当前配置的直播流服务（重新生成推流密钥）
+  const onResetStream = async () => {
+    if (!room || resetting) return;
+    if (
+      !confirm(
+        "重置后将生成新的推流密钥和播放地址，OBS 需要重新配置。\n确认把该房间迁移到当前直播流服务？",
+      )
+    ) {
+      return;
+    }
+    setResetting(true);
+    setResetMsg("");
+    try {
+      const r = await post<{ provider: string; streamKey: string; playbackUrl: string }>(
+        "/room/stream-reset",
+        { roomId },
+      );
+      setRoom({
+        ...room,
+        streamKey: r.streamKey,
+        playbackUrl: r.playbackUrl || undefined,
+        provider: r.provider,
+        status: "idle",
+      });
+      setResetMsg(`✅ 已迁移到 ${r.provider === "mux" ? "Mux" : "自建 MediaMTX"}，请用下方新密钥重新配置 OBS`);
+    } catch (e) {
+      setResetMsg((e as Error).message);
+    } finally {
+      setResetting(false);
+    }
+  };
+
   // 房管禁言：从聊天消息发起，选择时长后提交
   const onMuteUser = async (durationSec: number) => {
     if (!muteTarget) return;
@@ -525,17 +563,32 @@ export default function Room() {
           {isOwner && room.streamKey && (
             <div className="card small" style={{ marginTop: 12 }}>
               <div className="flex between" style={{ marginBottom: 8 }}>
-                <b>📡 推流信息（OBS）</b>
-                <button
-                  className="btn btn-sm btn-ghost"
-                  onClick={() => {
-                    void navigator.clipboard?.writeText(room.streamKey ?? "");
-                    setCopied(true);
-                    setTimeout(() => setCopied(false), 1500);
-                  }}
-                >
-                  {copied ? "✓ 已复制" : "复制密钥"}
-                </button>
+                <b>
+                  📡 推流信息（OBS）
+                  <span className="muted" style={{ fontWeight: 400, marginLeft: 8 }}>
+                    {room.provider === "mux" ? "Mux" : "自建 MediaMTX"}
+                  </span>
+                </b>
+                <span className="flex" style={{ gap: 6 }}>
+                  <button
+                    className="btn btn-sm btn-ghost"
+                    onClick={() => {
+                      void navigator.clipboard?.writeText(room.streamKey ?? "");
+                      setCopied(true);
+                      setTimeout(() => setCopied(false), 1500);
+                    }}
+                  >
+                    {copied ? "✓ 已复制" : "复制密钥"}
+                  </button>
+                  <button
+                    className="btn btn-sm btn-ghost"
+                    disabled={resetting}
+                    title="迁移到后台当前配置的直播流服务，推流密钥会更换"
+                    onClick={onResetStream}
+                  >
+                    {resetting ? "迁移中…" : "重置推流"}
+                  </button>
+                </span>
               </div>
               <p style={{ margin: "4px 0" }}>
                 服务器：<code>{rtmpUrl}</code>
@@ -543,6 +596,11 @@ export default function Room() {
               <p style={{ margin: "4px 0" }}>
                 串流密钥：<code>{room.streamKey}</code>
               </p>
+              {resetMsg && (
+                <p className="small" style={{ margin: "8px 0 0" }}>
+                  {resetMsg}
+                </p>
+              )}
             </div>
           )}
         </div>
