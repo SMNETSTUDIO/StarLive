@@ -65,6 +65,7 @@ export default function Room() {
   const [resetting, setResetting] = useState(false);
   const [resetMsg, setResetMsg] = useState("");
   const [danmakuOn, setDanmakuOn] = useState(true);
+  const [showKey, setShowKey] = useState(false);
   const messagesRef = useRef<DanmakuMessage[]>([]);
 
   const isOwner = user?.id === room?.ownerId;
@@ -558,7 +559,7 @@ export default function Room() {
                 {isOwner && room.streamKey && (
                   <div className="card small" style={{ textAlign: "left" }}>
                     <p>推流地址：<code>{rtmpUrl}</code></p>
-                    <p>推流密钥：<code>{room.streamKey}</code></p>
+                    <p>推流密钥：见下方「推流信息」</p>
                   </div>
                 )}
               </div>
@@ -598,7 +599,16 @@ export default function Room() {
                 服务器：<code>{rtmpUrl}</code>
               </p>
               <p style={{ margin: "4px 0" }}>
-                串流密钥：<code>{room.streamKey}</code>
+                串流密钥：
+                <code>{showKey ? room.streamKey : "•".repeat(Math.min(room.streamKey.length, 24))}</code>
+                <button
+                  className="btn btn-sm btn-ghost"
+                  style={{ marginLeft: 8, padding: "2px 8px" }}
+                  title={showKey ? "隐藏密钥" : "显示密钥"}
+                  onClick={() => setShowKey((v) => !v)}
+                >
+                  {showKey ? "🙈 隐藏" : "👁 显示"}
+                </button>
               </p>
               {resetMsg && (
                 <p className="small" style={{ margin: "8px 0 0" }}>
