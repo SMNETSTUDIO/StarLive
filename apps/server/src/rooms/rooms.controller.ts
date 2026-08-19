@@ -7,14 +7,33 @@ import {
   Post,
   Query,
   Req,
+  Res,
   UseGuards,
 } from "@nestjs/common";
+import type { Response } from "express";
 import { AuthGuard, OptionalAuthGuard, type AuthedRequest } from "../common/guards";
 import { RoomsService } from "./rooms.service";
+import { ThumbnailService } from "./thumbnail.service";
 
 @Controller("room")
 export class RoomsController {
-  constructor(private readonly rooms: RoomsService) {}
+  constructor(
+    private readonly rooms: RoomsService,
+    private readonly thumbs: ThumbnailService,
+  ) {}
+
+  /** 自建房间直播封面（ffmpeg 截帧），失败/未开播返回 404，前端回退占位图 */
+  @Get("thumbnail")
+  async thumbnail(@Query("roomId") roomId: string, @Res() res: Response) {
+    try {
+      const buf = await this.thumbs.capture(roomId);
+      res.setHeader("Content-Type", "image/jpeg");
+      res.setHeader("Cache-Control", "public, max-age=10");
+      res.send(buf);
+    } catch {
+      res.status(404).end();
+    }
+  }
 
   @Post("create")
   @UseGuards(AuthGuard)

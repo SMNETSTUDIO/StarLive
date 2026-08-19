@@ -94,7 +94,7 @@ export default function LiveList() {
               className="card card-hover"
               style={{ color: "inherit" }}
             >
-              <LiveThumb playbackUrl={r.playbackUrl} />
+              <LiveThumb roomId={r.id} playbackUrl={r.playbackUrl} />
               <div className="flex between" style={{ marginTop: 14 }}>
                 <span className="badge badge-live">直播中</span>
                 <span className="badge">👀 {r.viewerCount}</span>

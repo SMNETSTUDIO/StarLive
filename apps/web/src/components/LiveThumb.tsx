@@ -6,10 +6,25 @@ function muxCover(playbackUrl?: string): string | null {
   return m ? `https://image.mux.com/${m[1]}/thumbnail.webp?width=640` : null;
 }
 
-/** 直播卡片封面：Mux 房间显示实时截帧，其余（自建/未开播/加载失败）回退占位图 */
-export default function LiveThumb({ playbackUrl, live = true }: { playbackUrl?: string; live?: boolean }) {
+/**
+ * 直播卡片封面：Mux 房间用官方实时截帧，自建房间走服务端 ffmpeg 截帧接口；
+ * 未开播 / 加载失败回退渐变占位图。t 参数按 20s 分桶，随列表轮询刷新画面。
+ */
+export default function LiveThumb({
+  roomId,
+  playbackUrl,
+  live = true,
+}: {
+  roomId?: string;
+  playbackUrl?: string;
+  live?: boolean;
+}) {
   const [failed, setFailed] = useState(false);
-  const cover = live ? muxCover(playbackUrl) : null;
+  const bucket = Math.floor(Date.now() / 20000);
+  const cover = live
+    ? muxCover(playbackUrl) ??
+      (roomId ? `/api/room/thumbnail?roomId=${encodeURIComponent(roomId)}&t=${bucket}` : null)
+    : null;
 
   return (
     <div className="live-thumb">

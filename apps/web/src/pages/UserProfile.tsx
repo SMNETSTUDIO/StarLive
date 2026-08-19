@@ -160,7 +160,7 @@ export default function UserProfile() {
               className="card card-hover"
               style={{ color: "inherit" }}
             >
-              <LiveThumb playbackUrl={r.playbackUrl} live={r.status === "active"} />
+              <LiveThumb roomId={r.id} playbackUrl={r.playbackUrl} live={r.status === "active"} />
               <div className="flex between" style={{ marginTop: 14 }}>
                 {r.status === "active" ? (
                   <span className="badge badge-live">直播中</span>
