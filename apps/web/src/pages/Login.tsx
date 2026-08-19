@@ -32,7 +32,9 @@ export default function Login() {
     setError("");
     try {
       await login(account, password);
-      navigate("/");
+      // 仅允许站内路径回跳，防开放重定向
+      const redirect = searchParams.get("redirect");
+      navigate(redirect && redirect.startsWith("/") && !redirect.startsWith("//") ? redirect : "/");
     } catch (err) {
       setError((err as Error).message);
     } finally {
