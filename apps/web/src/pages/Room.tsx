@@ -466,7 +466,7 @@ export default function Room() {
 
   return (
     <div className="container container-wide">
-      <div className="flex between" style={{ marginBottom: 12 }}>
+      <div className="flex between room-head" style={{ marginBottom: 12 }}>
         <div>
           <h2 style={{ margin: 0 }}>
             {room.title}
@@ -490,7 +490,7 @@ export default function Room() {
             )}
           </span>
         </div>
-        <div className="flex">
+        <div className="flex room-head-actions">
           <Link className="btn btn-sm btn-ghost" to={`/user/${room.ownerId}`} title="主播主页">
             👤 主播
           </Link>

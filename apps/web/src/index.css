@@ -1911,6 +1911,14 @@ code {
   min-height: 0;
 }
 
+/* 礼物选择格：固定 3 列（含移动端），不随全局 grid 断点塌成单列 */
+.gift-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
 /* 播放器下方互动面板双列网格：同行卡片等高 */
 .room-widgets {
   display: grid;
@@ -2088,14 +2096,29 @@ code {
   .room-grid {
     grid-template-columns: 1fr;
   }
+  /* 打散左列，让聊天紧跟播放器：播放器(0) → 聊天(1) → 推流信息等(2) → 互动面板(3) */
+  .room-grid > div:first-child {
+    display: contents;
+  }
+  .room-grid > div:first-child > * {
+    order: 2;
+  }
+  .room-grid > div:first-child > .player-wrap {
+    order: 0;
+  }
+  .room-grid > div:first-child > .room-widgets {
+    order: 3;
+  }
   /* 单列时聊天不再 sticky，固定高度内部滚动 */
   .room-side {
+    order: 1;
     position: static;
-    height: 480px;
+    height: 440px;
     min-height: 0;
   }
   .room-widgets {
     grid-template-columns: 1fr;
+    margin-top: 0;
   }
 }
 
@@ -2110,6 +2133,14 @@ code {
   .grid-2,
   .grid-4 {
     grid-template-columns: 1fr;
+  }
+  /* 房间头部窄屏换行，避免标题区被按钮挤压成竖排 */
+  .room-head {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .room-head-actions {
+    flex-wrap: wrap;
   }
   .container {
     padding: 24px 16px 48px;

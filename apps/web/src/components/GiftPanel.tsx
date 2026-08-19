@@ -23,7 +23,7 @@ export default function GiftPanel({
   return (
     <div className="card">
       <h3>🎁 礼物</h3>
-      <div className="grid grid-3" style={{ marginBottom: 12, gap: 10 }}>
+      <div className="gift-grid">
         {gifts.map((g) => (
           <button
             key={g.id}
