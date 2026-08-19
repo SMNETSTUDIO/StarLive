@@ -50,3 +50,10 @@ export function post<T = unknown>(path: string, data?: unknown): Promise<T> {
     body: JSON.stringify(data ?? {}),
   });
 }
+
+export function del<T = unknown>(path: string, data?: unknown): Promise<T> {
+  return api<T>(path, {
+    method: "DELETE",
+    body: JSON.stringify(data ?? {}),
+  });
+}

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import MiniBars from "../components/MiniBars";
 import Modal from "../components/Modal";
-import { get, post } from "../lib/api";
+import { del, get, post } from "../lib/api";
 
 interface RoomItem {
   id: string;
@@ -109,7 +109,7 @@ export default function Dashboard() {
   const onDelete = async (roomId: string) => {
     if (!confirm("确认删除该房间？")) return;
     try {
-      await post("/room/delete", { roomId });
+      await del("/room/delete", { roomId });
       load();
     } catch (e) {
       setError((e as Error).message);
