@@ -94,7 +94,24 @@ export class RoomsService {
     if (room.banned) throw new BizException(ErrorCode.ROOM_BANNED, "房间已被封禁", 403);
 
     const isOwner = viewer.userId === room.ownerId;
-    const isAdmin = viewer.userId ? await this.isAdmin(viewer.userId) : false;
+
+    // 管理员判定 / 在线人数 / 推流状态相互独立，并发执行（远程 Redis 下省 2 轮往返）
+    const [isAdmin, counts, status] = await Promise.all([
+      viewer.userId && !isOwner ? this.isAdmin(viewer.userId) : Promise.resolve(false),
+      // 3s 内存缓存：多人同时进房只打一次 Redis
+      cached(`viewers:${roomId}`, 3000, () => countViewers(roomId)),
+      (async () => {
+        // 实时同步推流状态（按房间创建时的 Provider 轮询，带缓存降级）
+        if (!room.streamId) return room.status;
+        try {
+          const s = (await this.stream.getStream(room.streamId, room.provider)).status;
+          if (s !== room.status) await setRoomStatus(roomId, s);
+          return s;
+        } catch {
+          return room.status;
+        }
+      })(),
+    ]);
 
     if (room.passwordHash && !isOwner && !isAdmin) {
       if (!password) {
@@ -102,19 +119,6 @@ export class RoomsService {
       }
       if (hashPassword(password) !== room.passwordHash) {
         throw new BizException(ErrorCode.ROOM_PASSWORD_WRONG, "密码错误");
-      }
-    }
-
-    const counts = await countViewers(roomId);
-
-    // 实时同步推流状态（按房间创建时的 Provider 轮询，带缓存降级）
-    let status = room.status;
-    if (room.streamId) {
-      try {
-        status = (await this.stream.getStream(room.streamId, room.provider)).status;
-        if (status !== room.status) await setRoomStatus(roomId, status);
-      } catch {
-        status = room.status;
       }
     }
 

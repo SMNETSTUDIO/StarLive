@@ -15,6 +15,7 @@
     "@nestjs/websockets": "^10.4.4",
     "@starlive/shared": "workspace:*",
     "bcryptjs": "^2.4.3",
+    "compression": "^1.8.1",
     "dotenv": "^16.4.5",
     "ioredis": "^5.4.1",
     "jose": "^5.9.3",
@@ -24,6 +25,7 @@
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
+    "@types/compression": "^1.8.1",
     "@types/express": "^4.17.21",
     "@types/node": "^20.14.15",
     "typescript": "^5.5.4"

@@ -1,6 +1,7 @@
 import "reflect-metadata";
 import { NestFactory } from "@nestjs/core";
 import type { NestExpressApplication } from "@nestjs/platform-express";
+import compression from "compression";
 import type { NextFunction, Request, Response } from "express";
 import * as fs from "fs";
 import * as http from "http";
@@ -45,6 +46,14 @@ async function bootstrap(): Promise<void> {
   app.useGlobalFilters(new AllExceptionsFilter());
   app.useGlobalInterceptors(new TransformInterceptor());
 
+  // gzip 压缩：JS/CSS/JSON 体积缩小 3-4 倍（HLS 媒体流已压缩，跳过）
+  app.use(
+    compression({
+      filter: (req: Request, res: Response) =>
+        !req.path.startsWith("/hls") && compression.filter(req, res),
+    }),
+  );
+
   // 单端口一体化：/hls 转发到 MediaMTX
   app.use("/hls", hlsProxy(config.hlsProxyTarget));
 
@@ -52,7 +61,17 @@ async function bootstrap(): Promise<void> {
   const webDist = config.webDist || path.resolve(__dirname, "../../web/dist");
   const hasWeb = fs.existsSync(path.join(webDist, "index.html"));
   if (hasWeb) {
-    app.useStaticAssets(webDist, { index: "index.html" });
+    app.useStaticAssets(webDist, {
+      index: "index.html",
+      setHeaders: (res: Response, filePath: string) => {
+        // Vite 产物带内容哈希可永久缓存；index.html 实时校验以感知新版本
+        if (filePath.includes(`${path.sep}assets${path.sep}`)) {
+          res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+        } else {
+          res.setHeader("Cache-Control", "no-cache");
+        }
+      },
+    });
     app.use((req: Request, res: Response, next: NextFunction) => {
       const p = req.path;
       if (

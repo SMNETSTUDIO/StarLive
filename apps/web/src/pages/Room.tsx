@@ -218,10 +218,16 @@ export default function Room() {
         .then((r) => setOnlineUsers(r.users))
         .catch(() => undefined);
     loadViewers();
+    // presence 事件随每个观众心跳触发（N 人 = N 次/10s），在线列表拉取节流到 5s 一次；
+    // 人数本身直接用事件携带的值，无额外请求
+    let lastViewersLoad = Date.now();
     const onPresence = (p: { roomId?: string; viewerCount: number }) => {
       if (p.roomId && p.roomId !== roomId) return;
       setViewers(p.viewerCount);
-      loadViewers();
+      if (Date.now() - lastViewersLoad > 5000) {
+        lastViewersLoad = Date.now();
+        loadViewers();
+      }
     };
     const onRoomStatus = (p: { roomId?: string; status: string }) => {
       if (p.roomId && p.roomId !== roomId) return;
