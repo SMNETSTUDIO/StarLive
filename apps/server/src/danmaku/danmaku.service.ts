@@ -38,36 +38,26 @@ export class DanmakuService {
       throw new BizException(ErrorCode.INVALID_AMOUNT, `弹幕最长 ${MAX_LEN} 字符`);
     }
 
-    const room = await getRoom(input.roomId);
-    if (!room) throw new BizException(ErrorCode.NOT_FOUND, "房间不存在");
-    if (room.banned) throw new BizException(ErrorCode.ROOM_BANNED, "房间已被封禁", 403);
-
     const identity = input.userId ?? input.guestId ?? "anon";
 
-    // 全局禁言
-    const globalMute = await redis().hget(Keys.systemConfig, "global_mute");
+    // 全部前置校验并发执行（autoPipelining 合并为一次往返；原为 6+ 次串行）
+    const [room, globalMute, user, roomMuted, rateOk, words] = await Promise.all([
+      getRoom(input.roomId),
+      redis().hget(Keys.systemConfig, "global_mute"),
+      input.userId ? getUserById(input.userId) : Promise.resolve(null),
+      redis().exists(Keys.roomMuted(input.roomId, identity)),
+      this.checkRate(identity),
+      cached("sensitive_words", 60_000, () => redis().smembers(Keys.adminSensitiveWords)),
+    ]);
+
+    if (!room) throw new BizException(ErrorCode.NOT_FOUND, "房间不存在");
+    if (room.banned) throw new BizException(ErrorCode.ROOM_BANNED, "房间已被封禁", 403);
     if (globalMute === "true") throw new BizException(ErrorCode.MUTED, "全站禁言中");
-
-    // 用户封禁/禁言
-    if (input.userId) {
-      const user = await getUserById(input.userId);
-      if (user?.banned === "true") throw new BizException(ErrorCode.BANNED, "账号已被封禁", 403);
-      if (user?.muted === "true") throw new BizException(ErrorCode.MUTED, "你已被禁言");
-    }
-
-    // 房间禁言
-    const roomMuted = await redis().exists(Keys.roomMuted(input.roomId, identity));
+    if (user?.banned === "true") throw new BizException(ErrorCode.BANNED, "账号已被封禁", 403);
+    if (user?.muted === "true") throw new BizException(ErrorCode.MUTED, "你已被禁言");
     if (roomMuted) throw new BizException(ErrorCode.ROOM_MUTED, "你已被房间禁言");
+    if (!rateOk) throw new BizException(ErrorCode.RATE_LIMITED, "发送太频繁，请稍后再试");
 
-    // 频率限制
-    if (!(await this.checkRate(identity))) {
-      throw new BizException(ErrorCode.RATE_LIMITED, "发送太频繁，请稍后再试");
-    }
-
-    // 敏感词
-    const words = await cached("sensitive_words", 60_000, () =>
-      redis().smembers(Keys.adminSensitiveWords),
-    );
     const lower = content.toLowerCase();
     for (const w of words) {
       if (w && lower.includes(w.toLowerCase())) {
@@ -87,13 +77,14 @@ export class DanmakuService {
       ts: Date.now(),
     };
 
-    const r = redis();
-    await r.zadd(Keys.danmakuZset(input.roomId), msg.ts, JSON.stringify(msg));
-    const count = await r.zcard(Keys.danmakuZset(input.roomId));
-    if (count > MAX_KEEP) {
-      await r.zremrangebyrank(Keys.danmakuZset(input.roomId), 0, count - MAX_KEEP - 1);
-    }
-    await r.set(Keys.danmakuLastUpdate(input.roomId), msg.ts);
+    // 写入 + 截断 + 更新时间戳合并为一次 pipeline 往返
+    // （zremrangebyrank 负 rank 无条件保留最新 MAX_KEEP 条，无需先 zcard）
+    const { redisPipeline } = await import("../common/redis");
+    await redisPipeline((p) => {
+      p.zadd(Keys.danmakuZset(input.roomId), msg.ts, JSON.stringify(msg));
+      p.zremrangebyrank(Keys.danmakuZset(input.roomId), 0, -(MAX_KEEP + 1));
+      p.set(Keys.danmakuLastUpdate(input.roomId), String(msg.ts));
+    });
 
     publishEvent(EVT.DANMAKU, msg);
     return msg;

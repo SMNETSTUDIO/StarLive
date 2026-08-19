@@ -119,6 +119,14 @@ export async function heartbeatViewer(
   const u = res[3] ?? 0;
   const g = res[4] ?? 0;
   const counts = { viewerCount: u + g, registeredCount: u, guestCount: g };
-  publishEvent(EVT.PRESENCE, { roomId, ...counts });
+  // presence 随每个观众心跳触发（N 人 = N 次/10s）：人数未变且 3s 内已广播过则跳过，
+  // 大房间的 ws 广播量从 O(N²) 降到 O(N)
+  const last = lastPresence.get(roomId);
+  if (!last || last.viewerCount !== counts.viewerCount || now - last.ts > 3000) {
+    lastPresence.set(roomId, { viewerCount: counts.viewerCount, ts: now });
+    publishEvent(EVT.PRESENCE, { roomId, ...counts });
+  }
   return counts;
 }
+
+const lastPresence = new Map<string, { viewerCount: number; ts: number }>();
