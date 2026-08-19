@@ -1608,6 +1608,282 @@ code {
   object-fit: contain;
 }
 
+/* 播放器：自绘控制条 */
+.vplayer {
+  user-select: none;
+}
+
+.vplayer video {
+  cursor: pointer;
+}
+
+.vp-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 28px 14px 10px;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.82), rgba(0, 0, 0, 0.35) 60%, transparent);
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  pointer-events: none;
+}
+
+.vp-controls-on .vp-bar {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.vp-flex {
+  flex: 1;
+}
+
+.vp-btn {
+  background: none;
+  border: 0;
+  color: #fff;
+  font-size: 17px;
+  line-height: 1;
+  padding: 6px 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.vp-btn:hover {
+  background: rgba(255, 255, 255, 0.14);
+  transform: scale(1.06);
+}
+
+.vp-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: rgba(255, 255, 255, 0.75);
+  background: rgba(255, 255, 255, 0.1);
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+
+.vp-live i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #8e8e93;
+}
+
+.vp-live.on {
+  color: #fff;
+  background: rgba(255, 59, 48, 0.28);
+}
+
+.vp-live.on i {
+  background: #ff3b30;
+  box-shadow: 0 0 8px rgba(255, 59, 48, 0.9);
+  animation: vp-blink 1.6s ease infinite;
+}
+
+@keyframes vp-blink {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+/* 网页全屏（B 站风格剧场模式） */
+.vplayer.vp-webfull {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  aspect-ratio: auto;
+  border-radius: 0;
+  border: 0;
+}
+
+/* 弹幕/画质等胶囊按钮 */
+.vp-pill {
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.vp-pill:hover {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.vp-pill.on {
+  border-color: var(--accent);
+  background: rgba(10, 132, 255, 0.28);
+  color: #fff;
+}
+
+.vp-quality {
+  position: relative;
+}
+
+.vp-menu {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  min-width: 96px;
+  padding: 6px;
+  border-radius: 10px;
+  background: rgba(20, 20, 24, 0.92);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5), inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+}
+
+.vp-menu button {
+  border: 0;
+  background: none;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 13px;
+  text-align: center;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.vp-menu button:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.vp-menu button.active {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.vp-volume {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.vp-volume input[type="range"] {
+  width: 0;
+  opacity: 0;
+  transition: width 0.25s ease, opacity 0.25s ease;
+  accent-color: var(--accent);
+}
+
+.vp-volume:hover input[type="range"] {
+  width: 88px;
+  opacity: 1;
+}
+
+.vp-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: radial-gradient(ellipse at center, rgba(10, 132, 255, 0.08), transparent 70%);
+  color: #fff;
+}
+
+.vp-overlay p {
+  margin: 0;
+  font-weight: 600;
+}
+
+.vp-pulse {
+  font-size: 42px;
+  animation: vp-pulse 2s ease infinite;
+}
+
+@keyframes vp-pulse {
+  50% {
+    transform: scale(1.15);
+    opacity: 0.7;
+  }
+}
+
+.vp-spinner {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 42px;
+  height: 42px;
+  margin: -21px 0 0 -21px;
+  border: 3px solid rgba(255, 255, 255, 0.2);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: vp-spin 0.9s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes vp-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.vp-bigplay {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  border: 0;
+  cursor: pointer;
+  font-size: 26px;
+  color: #fff;
+  padding-left: 6px;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5), inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.vp-bigplay:hover {
+  transform: translate(-50%, -50%) scale(1.08);
+  background: rgba(10, 132, 255, 0.6);
+}
+
+.vp-unmute {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  border: 0;
+  cursor: pointer;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 7px 12px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8px);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+  transition: background 0.15s ease;
+}
+
+.vp-unmute:hover {
+  background: rgba(10, 132, 255, 0.65);
+}
+
 /* 聊天气泡 */
 .chat-list {
   display: flex;

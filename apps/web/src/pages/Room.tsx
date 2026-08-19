@@ -64,6 +64,7 @@ export default function Room() {
   const [mutedUntil, setMutedUntil] = useState(0);
   const [resetting, setResetting] = useState(false);
   const [resetMsg, setResetMsg] = useState("");
+  const [danmakuOn, setDanmakuOn] = useState(true);
   const messagesRef = useRef<DanmakuMessage[]>([]);
 
   const isOwner = user?.id === room?.ownerId;
@@ -540,11 +541,14 @@ export default function Room() {
       <div className="room-grid">
         <div>
           {room.playbackUrl ? (
-            <div style={{ position: "relative" }}>
-              <Player src={room.playbackUrl} />
-              <DanmakuLayer messages={messages} />
+            <Player
+              src={room.playbackUrl}
+              danmakuOn={danmakuOn}
+              onToggleDanmaku={() => setDanmakuOn((v) => !v)}
+            >
+              {danmakuOn && <DanmakuLayer messages={messages} />}
               <GiftEffectLayer effects={giftFx} />
-            </div>
+            </Player>
           ) : (
             <div className="player-wrap" style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
               <GiftEffectLayer effects={giftFx} />
