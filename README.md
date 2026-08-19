@@ -4,8 +4,8 @@
 
 **可自部署的直播互动平台** · Self-hosted live-streaming & interaction platform
 
-自托管推流走 **MediaMTX**，实时互动走 **Socket.IO**，数据存 **Redis**，内置 **星币（StarCoin）虚拟货币经济**。
-Streams via self-hosted **MediaMTX**, real-time via **Socket.IO**, data in **Redis**, with a built-in **StarCoin virtual-currency economy**.
+推流自托管 **MediaMTX** / 云端 **Mux** 可切换，实时互动走 **Socket.IO**，数据存 **Redis**，内置 **星币（StarCoin）虚拟货币经济**。
+Streams via self-hosted **MediaMTX** or cloud **Mux** (switchable), real-time via **Socket.IO**, data in **Redis**, with a built-in **StarCoin virtual-currency economy**.
 
 [功能 Features](#功能-features) · [架构 Architecture](#架构-architecture) · [快速开始 Quick Start](#快速开始-quick-start) · [配置 Configuration](#配置-configuration) · [文档 Docs](#文档-docs) · [许可证 License](#许可证-license)
 
@@ -22,7 +22,7 @@ Streams via self-hosted **MediaMTX**, real-time via **Socket.IO**, data in **Red
 
 | 中文 | English |
 |------|---------|
-| 直播：MediaMTX 自托管推流/播放（RTMP 入 + HLS 出），Mux 可选 Provider | Streaming: self-hosted MediaMTX (RTMP in + HLS out), Mux as optional provider |
+| 直播：MediaMTX 自托管推流/播放（RTMP 入 + HLS 出）；Mux 云端 Provider 后台一键切换（RTMPS 推流 + 自动录制回放），存量房间沿用原 Provider | Streaming: self-hosted MediaMTX (RTMP in + HLS out); Mux cloud provider switchable in admin (RTMPS ingest + auto-recorded VOD), existing rooms keep their provider |
 | 实时互动：Socket.IO 全房广播 —— 弹幕、礼物特效、红包、抽奖、在线人数 | Real-time: Socket.IO room broadcast — danmaku, gift effects, red packets, lottery, presence |
 | 经济系统：星币充值（多支付网关）、提现（手续费 + 资金冻结）、交易流水 | Economy: StarCoin top-up (multi-gateway), withdrawal (fees + fund freezing), transaction ledger |
 | 互动玩法：弹幕、礼物、红包（随机/均分）、抽奖、在线心跳 | Interactions: danmaku, gifts, red packets (random/equal split), lottery, viewer heartbeat |
@@ -41,7 +41,7 @@ Streams via self-hosted **MediaMTX**, real-time via **Socket.IO**, data in **Red
 | 后端 Backend | Node 20 · NestJS 10 · TypeScript |
 | 实时通信 Real-time | Socket.IO 4 |
 | 数据库 Database | Redis（ioredis，自托管或 Upstash / self-hosted or Upstash） |
-| 推流/分发 Streaming | MediaMTX（首选 preferred）/ SRS |
+| 推流/分发 Streaming | MediaMTX（自托管首选 self-hosted, preferred）/ Mux（云端 Provider，零 SDK 直连 REST / cloud provider, zero-SDK REST）；推流鉴权钩子兼容 SRS（auth hook SRS-compatible） |
 | 转码/录播 Transcode | FFmpeg（独立 Worker，可开关 / standalone worker, toggleable） |
 | 前端 Frontend | React 18 · Vite 5 · TailwindCSS · React Router · hls.js |
 | 认证 Auth | JWT（jose，HS256）+ bcrypt |
@@ -51,10 +51,15 @@ Streams via self-hosted **MediaMTX**, real-time via **Socket.IO**, data in **Red
 ## 架构 Architecture
 
 ```
+自托管 Self-hosted（默认 default）:
 OBS ──RTMP──► MediaMTX(:1935/{streamKey})
                 ├─► HLS (fMP4) ──► 前端 hls.js 播放 / played by hls.js in browser
                 ├─► WebRTC(可选 optional) ──► 超低延迟 ultra-low latency
                 └─► Worker(FFmpeg) ──► 转码/落盘录制 transcode/record ──► 对象存储 object storage
+
+云端 Cloud（后台一键切换 switch in admin）:
+OBS ──RTMPS──► Mux ──► Mux HLS ──► 前端 hls.js 播放
+                 └─► 自动录制 auto-recorded VOD ──► 录播页回放 playback
 
 浏览器 ──► 一体化服务 :3000（网页 + /api + /socket.io + /hls 同源）──► Redis
 Browser ──► unified service :3000 (web + /api + /socket.io + /hls same-origin) ──► Redis
