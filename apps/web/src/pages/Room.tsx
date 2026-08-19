@@ -3,7 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import type { DanmakuMessage, GiftDefinition, GiftMessage } from "@starlive/shared";
 import ChatPanel from "../components/ChatPanel";
 import DanmakuLayer from "../components/DanmakuLayer";
-import GiftEffectLayer, { type GiftFx } from "../components/GiftEffectLayer";
+import GiftEffectLayer, { giftFxDuration, giftTier, type GiftFx } from "../components/GiftEffectLayer";
 import GiftPanel from "../components/GiftPanel";
 import LiveEvents from "../components/LiveEvents";
 import LotteryPanel, { type LotteryInfo } from "../components/LotteryPanel";
@@ -194,19 +194,20 @@ export default function Room() {
         color: "#ffd60a",
         ts: g.ts,
       } as DanmakuMessage);
-      // 播放特效（总价 ≥520 触发全屏爆发）
+      // 播放特效：按总价值分级（漂浮 / 跑车横穿 / 火箭升空 / 全屏庆典）
+      const tier = giftTier(g.price * g.count);
       const fx: GiftFx = {
         id: `${g.id}_${g.ts}`,
         emoji,
         fromName: g.fromName,
         giftName: g.giftName,
         count: g.count,
-        big: g.price * g.count >= 520,
+        tier,
       };
       setGiftFx((list) => [...list.slice(-4), fx]);
       setTimeout(() => {
         setGiftFx((list) => list.filter((x) => x.id !== fx.id));
-      }, 3900);
+      }, giftFxDuration(tier));
       // 刷新贡献榜
       loadRewards();
     };

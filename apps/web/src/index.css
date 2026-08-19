@@ -1089,84 +1089,201 @@ code {
   }
 }
 
-/* 大额礼物中央爆发 */
-.gift-burst {
+/* ===== 分级礼物特效 ===== */
+
+/* 高价值礼物触发轻微屏幕震动 */
+.fx-shake {
+  animation: fx-shake 0.5s ease 0.3s 2;
+}
+
+@keyframes fx-shake {
+  0%, 100% { transform: translate(0, 0); }
+  20% { transform: translate(-3px, 2px); }
+  40% { transform: translate(3px, -2px); }
+  60% { transform: translate(-2px, -2px); }
+  80% { transform: translate(2px, 2px); }
+}
+
+/* 横幅按档位配色 */
+.gift-banner.tier-rocket {
+  background: linear-gradient(90deg, rgba(255, 106, 61, 0.9), rgba(255, 59, 48, 0.7) 70%, rgba(255, 59, 48, 0.3));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3), 0 8px 24px rgba(255, 69, 58, 0.45);
+}
+
+.gift-banner.tier-epic {
+  background: linear-gradient(90deg, rgba(255, 184, 0, 0.95), rgba(255, 122, 0, 0.75) 70%, rgba(255, 122, 0, 0.3));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4), 0 8px 28px rgba(255, 184, 0, 0.5);
+}
+
+/* Tier 1：漂浮表情（小心心/玫瑰）—— 底部升起左右摇摆消散 */
+.fx-float {
+  position: absolute;
+  bottom: -8%;
+  animation: fx-float-up 3.4s ease-out forwards;
+  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.35));
+}
+
+@keyframes fx-float-up {
+  0% { opacity: 0; transform: translate(0, 0) scale(0.5) rotate(0); }
+  12% { opacity: 1; transform: translate(calc(var(--sway) * 0.3), -14%) scale(1); }
+  100% { opacity: 0; transform: translate(var(--sway), -105vh) scale(1.2) rotate(24deg); }
+}
+
+/* Tier 2：跑车横穿屏幕 */
+.fx-drive {
+  position: absolute;
+  bottom: 18%;
+  left: 0;
+  animation: fx-drive-across 2.6s cubic-bezier(0.3, 0, 0.4, 1) forwards;
+}
+
+.fx-drive-emoji {
+  font-size: 64px;
+  display: inline-block;
+  transform: scaleX(-1);
+  animation: fx-drive-bump 0.22s ease infinite alternate;
+  filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.5));
+}
+
+.fx-drive-lines {
+  position: absolute;
+  top: 50%;
+  right: 100%;
+  width: 90px;
+  height: 3px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.75));
+  box-shadow: 0 -12px 0 -1px rgba(255, 255, 255, 0.45), 0 12px 0 -1px rgba(255, 255, 255, 0.45);
+}
+
+@keyframes fx-drive-across {
+  from { transform: translateX(-140px); }
+  to { transform: translateX(calc(100vw + 160px)); }
+}
+
+@keyframes fx-drive-bump {
+  from { transform: scaleX(-1) translateY(0); }
+  to { transform: scaleX(-1) translateY(-4px); }
+}
+
+/* Tier 3：火箭升空 + 冲击波 */
+.fx-rocket {
+  position: absolute;
+  left: 50%;
+  bottom: -12%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  animation: fx-rocket-launch 2.8s cubic-bezier(0.5, 0, 0.7, 0.2) 0.5s forwards;
+}
+
+.fx-rocket-emoji {
+  font-size: 88px;
+  transform: rotate(-45deg);
+  filter: drop-shadow(0 14px 30px rgba(0, 0, 0, 0.55));
+}
+
+.fx-rocket-flame {
+  font-size: 40px;
+  margin-top: -14px;
+  animation: fx-flame 0.16s ease infinite alternate;
+}
+
+@keyframes fx-rocket-launch {
+  0% { transform: translate(-50%, 0) scale(0.8); }
+  18% { transform: translate(-50%, -6vh) scale(1); }
+  100% { transform: translate(-50%, -130vh) scale(1.05); }
+}
+
+@keyframes fx-flame {
+  from { transform: scaleY(1); opacity: 1; }
+  to { transform: scaleY(1.5); opacity: 0.75; }
+}
+
+.fx-shockwave {
+  position: absolute;
+  left: 50%;
+  bottom: 6%;
+  width: 60px;
+  height: 60px;
+  margin-left: -30px;
+  border-radius: 50%;
+  border: 3px solid rgba(255, 214, 10, 0.8);
+  animation: fx-shockwave 1s ease-out 0.45s 2;
+  opacity: 0;
+}
+
+@keyframes fx-shockwave {
+  0% { opacity: 0.9; transform: scale(0.4); }
+  100% { opacity: 0; transform: scale(4); }
+}
+
+/* Tier 4：全屏庆典（皇冠级） */
+.fx-epic-glow {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 50% 110%, rgba(255, 184, 0, 0.35), transparent 60%),
+    radial-gradient(ellipse at 50% -10%, rgba(255, 214, 10, 0.22), transparent 55%);
+  animation: fx-epic-glow 5s ease forwards;
+}
+
+@keyframes fx-epic-glow {
+  0%, 80% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+.fx-epic-center {
   position: absolute;
   inset: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  animation: burst-fade 0.5s ease 3.2s forwards;
+  gap: 12px;
+  animation: fx-epic-fade 0.6s ease 4.4s forwards;
 }
 
-.gift-burst::before {
-  content: "";
-  position: absolute;
-  width: 320px;
-  height: 320px;
-  border-radius: 50%;
-  background: radial-gradient(
-    closest-side,
-    rgba(255, 214, 10, 0.28),
-    rgba(255, 69, 58, 0.12) 60%,
-    transparent
-  );
-  filter: blur(18px);
-  animation: burst-glow 0.6s var(--spring) both;
+.fx-epic-emoji {
+  font-size: 110px;
+  animation: fx-epic-drop 1.1s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  filter: drop-shadow(0 0 40px rgba(255, 214, 10, 0.7)) drop-shadow(0 16px 30px rgba(0, 0, 0, 0.5));
 }
 
-.gift-burst-emoji {
-  font-size: 96px;
-  position: relative;
-  animation: burst-pop 0.7s var(--spring) both;
-  filter: drop-shadow(0 12px 30px rgba(0, 0, 0, 0.5));
+@keyframes fx-epic-drop {
+  0% { opacity: 0; transform: translateY(-60vh) scale(0.5) rotate(-16deg); }
+  70% { opacity: 1; transform: translateY(4vh) scale(1.1) rotate(4deg); }
+  100% { transform: translateY(0) scale(1) rotate(0); }
 }
 
-.gift-burst-name {
-  position: relative;
-  padding: 6px 18px;
+@keyframes fx-epic-fade {
+  to { opacity: 0; }
+}
+
+.fx-epic-name {
+  padding: 8px 22px;
   border-radius: 999px;
   background: rgba(0, 0, 0, 0.55);
-  border: 1px solid rgba(255, 214, 10, 0.4);
+  border: 1px solid rgba(255, 214, 10, 0.5);
   color: #ffd60a;
-  font-weight: 600;
-  font-size: 15px;
+  font-weight: 700;
+  font-size: 16px;
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  animation: gift-in 0.5s var(--spring) 0.15s both;
+  animation: gift-in 0.5s var(--spring) 0.5s both;
 }
 
-@keyframes burst-pop {
-  0% {
-    opacity: 0;
-    transform: scale(0.2);
-  }
-  60% {
-    opacity: 1;
-    transform: scale(1.25);
-  }
-  100% {
-    transform: scale(1);
-  }
+/* 星星雨 */
+.fx-star {
+  position: absolute;
+  top: -6%;
+  animation: fx-star-fall 2.6s linear forwards;
 }
 
-@keyframes burst-glow {
-  from {
-    opacity: 0;
-    transform: scale(0.4);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-@keyframes burst-fade {
-  to {
-    opacity: 0;
-  }
+@keyframes fx-star-fall {
+  0% { opacity: 0; transform: translateY(0) rotate(0); }
+  10% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(115vh) rotate(200deg); }
 }
 
 /* 红包 */
