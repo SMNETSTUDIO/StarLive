@@ -389,6 +389,7 @@ export class RoomsService {
         category: room.category,
         tags: room.tags,
         status: room.status,
+        playbackUrl: room.playbackUrl,
         createdAt: room.createdAt,
         ...counts,
       });

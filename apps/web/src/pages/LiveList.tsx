@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import LiveThumb from "../components/LiveThumb";
 import { get } from "../lib/api";
 
 interface RoomItem {
@@ -8,6 +9,7 @@ interface RoomItem {
   ownerId: string;
   category: string;
   status: string;
+  playbackUrl?: string;
   viewerCount: number;
   createdAt: number;
 }
@@ -92,9 +94,7 @@ export default function LiveList() {
               className="card card-hover"
               style={{ color: "inherit" }}
             >
-              <div className="live-thumb">
-                <span style={{ fontSize: 34 }}>🎥</span>
-              </div>
+              <LiveThumb playbackUrl={r.playbackUrl} />
               <div className="flex between" style={{ marginTop: 14 }}>
                 <span className="badge badge-live">直播中</span>
                 <span className="badge">👀 {r.viewerCount}</span>

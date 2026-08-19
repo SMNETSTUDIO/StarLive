@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import LiveThumb from "../components/LiveThumb";
 import { useAuth } from "../context/AuthContext";
 import { get, post } from "../lib/api";
 
@@ -10,6 +11,7 @@ interface PublicRoom {
   category?: string;
   tags?: string[];
   status: string;
+  playbackUrl?: string;
   viewerCount: number;
   createdAt: number;
 }
@@ -158,9 +160,7 @@ export default function UserProfile() {
               className="card card-hover"
               style={{ color: "inherit" }}
             >
-              <div className="live-thumb">
-                <span style={{ fontSize: 34 }}>{r.status === "active" ? "🎥" : "📺"}</span>
-              </div>
+              <LiveThumb playbackUrl={r.playbackUrl} live={r.status === "active"} />
               <div className="flex between" style={{ marginTop: 14 }}>
                 {r.status === "active" ? (
                   <span className="badge badge-live">直播中</span>

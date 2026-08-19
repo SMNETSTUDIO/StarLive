@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import LiveThumb from "../components/LiveThumb";
 import { useAuth } from "../context/AuthContext";
 import { get, post } from "../lib/api";
 
@@ -9,6 +10,7 @@ interface LiveRoom {
   category: string;
   viewerCount: number;
   status: string;
+  playbackUrl?: string;
 }
 
 /** 正在直播区块：有开播房间时才渲染 */
@@ -39,9 +41,7 @@ function LiveNow() {
             className="card card-hover"
             style={{ color: "inherit" }}
           >
-            <div className="live-thumb">
-              <span style={{ fontSize: 34 }}>🎥</span>
-            </div>
+            <LiveThumb playbackUrl={r.playbackUrl} />
             <div className="flex between" style={{ marginTop: 14 }}>
               <span className="badge badge-live">直播中</span>
               <span className="badge">👀 {r.viewerCount}</span>
