@@ -1,7 +1,7 @@
 {
   "version": 1,
   "repository": "SMNETSTUDIO/StarLive",
-  "updatedAt": "2026-09-07T09:43:57.778Z",
+  "updatedAt": "2026-09-08T09:05:40.597Z",
   "backfilledAt": "",
   "totals": {
     "downloads": 0,
@@ -129,6 +129,12 @@
     {
       "date": "2026-09-07",
       "stars": 157,
+      "forks": 72,
+      "downloads": 0
+    },
+    {
+      "date": "2026-09-08",
+      "stars": 158,
       "forks": 72,
       "downloads": 0
     }
