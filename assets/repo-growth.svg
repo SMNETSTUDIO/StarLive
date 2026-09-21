@@ -30,7 +30,7 @@
   <g transform="translate(42 38)">
     <rect x="0" y="0" width="916" height="664" rx="22" class="surface" filter="url(#shadow)"/>
     <text x="30" y="45" class="primary" font-size="26" font-weight="750" letter-spacing="-.5">StarLive growth</text>
-    <text x="30" y="70" class="secondary" font-size="14">SMNETSTUDIO/StarLive · Aug 19, 2026 – Sep 20, 2026</text>
+    <text x="30" y="70" class="secondary" font-size="14">SMNETSTUDIO/StarLive · Aug 19, 2026 – Sep 21, 2026</text>
     <g transform="translate(740 25)"><rect width="146" height="30" rx="15" fill="#8b5cf6" fill-opacity=".12"/><circle cx="17" cy="15" r="4" fill="#8b5cf6"/><text x="30" y="20" fill="#8b5cf6" font-size="11" font-weight="700" letter-spacing="1">LOCAL HISTORY</text></g>
     <g transform="translate(30 92)">
     <rect width="418" height="86" rx="16" class="panel"/>
@@ -52,10 +52,10 @@
     <text x="20" y="62" class="primary" font-size="20" font-weight="750">165</text>
     <text x="20" y="83" class="secondary" font-size="11">range 9–165</text>
     <line x1="220" x2="836" y1="20" y2="20" class="grid" stroke-width="1" stroke-dasharray="3 6"/><text x="210" y="24" text-anchor="end" class="secondary" font-size="9">165</text><line x1="220" x2="836" y1="95" y2="95" class="grid" stroke-width="1" stroke-dasharray="3 6"/><text x="210" y="99" text-anchor="end" class="secondary" font-size="9">87</text><line x1="220" x2="836" y1="170" y2="170" class="grid" stroke-width="1" stroke-dasharray="3 6"/><text x="210" y="174" text-anchor="end" class="secondary" font-size="9">9</text>
-    <path d="M220 170 L239.3 116.2 L258.5 86.3 L277.8 72.9 L297 59.4 L316.3 46.9 L335.5 39.2 L354.8 39.2 L374 34.4 L393.3 32.5 L412.5 32.5 L431.8 31.5 L451 31.5 L470.3 30.6 L489.5 30.6 L508.8 29.6 L528 28.7 L547.3 27.7 L566.5 27.7 L585.8 27.7 L605 26.7 L624.3 25.8 L643.5 24.8 L662.8 24.8 L682 23.8 L701.3 22.9 L720.5 22.9 L739.8 21.9 L759 21 L778.3 20 L797.5 20 L816.8 20 L836 20 L836 170 L220 170 Z" fill="url(#fill-stars)"/>
-    <path d="M220 170 L239.3 116.2 L258.5 86.3 L277.8 72.9 L297 59.4 L316.3 46.9 L335.5 39.2 L354.8 39.2 L374 34.4 L393.3 32.5 L412.5 32.5 L431.8 31.5 L451 31.5 L470.3 30.6 L489.5 30.6 L508.8 29.6 L528 28.7 L547.3 27.7 L566.5 27.7 L585.8 27.7 L605 26.7 L624.3 25.8 L643.5 24.8 L662.8 24.8 L682 23.8 L701.3 22.9 L720.5 22.9 L739.8 21.9 L759 21 L778.3 20 L797.5 20 L816.8 20 L836 20" fill="none" stroke="#8b5cf6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M220 170 L238.7 116.2 L257.3 86.3 L276 72.9 L294.7 59.4 L313.3 46.9 L332 39.2 L350.7 39.2 L369.3 34.4 L388 32.5 L406.7 32.5 L425.3 31.5 L444 31.5 L462.7 30.6 L481.3 30.6 L500 29.6 L518.7 28.7 L537.3 27.7 L556 27.7 L574.7 27.7 L593.3 26.7 L612 25.8 L630.7 24.8 L649.3 24.8 L668 23.8 L686.7 22.9 L705.3 22.9 L724 21.9 L742.7 21 L761.3 20 L780 20 L798.7 20 L817.3 20 L836 20 L836 170 L220 170 Z" fill="url(#fill-stars)"/>
+    <path d="M220 170 L238.7 116.2 L257.3 86.3 L276 72.9 L294.7 59.4 L313.3 46.9 L332 39.2 L350.7 39.2 L369.3 34.4 L388 32.5 L406.7 32.5 L425.3 31.5 L444 31.5 L462.7 30.6 L481.3 30.6 L500 29.6 L518.7 28.7 L537.3 27.7 L556 27.7 L574.7 27.7 L593.3 26.7 L612 25.8 L630.7 24.8 L649.3 24.8 L668 23.8 L686.7 22.9 L705.3 22.9 L724 21.9 L742.7 21 L761.3 20 L780 20 L798.7 20 L817.3 20 L836 20" fill="none" stroke="#8b5cf6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
     <circle cx="836" cy="20" r="5" fill="#8b5cf6" stroke="#fff" stroke-width="2"/>
-    <text x="220" y="194" text-anchor="start" class="secondary" font-size="9">Aug 19, 2026</text><text x="528" y="194" text-anchor="middle" class="secondary" font-size="9">Sep 4, 2026</text><text x="836" y="194" text-anchor="end" class="secondary" font-size="9">Sep 20, 2026</text>
+    <text x="220" y="194" text-anchor="start" class="secondary" font-size="9">Aug 19, 2026</text><text x="528" y="194" text-anchor="middle" class="secondary" font-size="9">Sep 4, 2026</text><text x="836" y="194" text-anchor="end" class="secondary" font-size="9">Sep 21, 2026</text>
   </g><g transform="translate(30 414)">
     <rect width="856" height="201" rx="16" class="panel"/>
     <circle cx="20" cy="27" r="5" fill="#06b6d4"/>
@@ -63,12 +63,12 @@
     <text x="20" y="62" class="primary" font-size="20" font-weight="750">73</text>
     <text x="20" y="83" class="secondary" font-size="11">range 3–73</text>
     <line x1="220" x2="836" y1="20" y2="20" class="grid" stroke-width="1" stroke-dasharray="3 6"/><text x="210" y="24" text-anchor="end" class="secondary" font-size="9">73</text><line x1="220" x2="836" y1="95" y2="95" class="grid" stroke-width="1" stroke-dasharray="3 6"/><text x="210" y="99" text-anchor="end" class="secondary" font-size="9">38</text><line x1="220" x2="836" y1="170" y2="170" class="grid" stroke-width="1" stroke-dasharray="3 6"/><text x="210" y="174" text-anchor="end" class="secondary" font-size="9">3</text>
-    <path d="M220 170 L239.3 114.3 L258.5 82.1 L277.8 67.1 L297 56.4 L316.3 45.7 L335.5 37.1 L354.8 35 L374 35 L393.3 32.9 L412.5 32.9 L431.8 30.7 L451 30.7 L470.3 28.6 L489.5 26.4 L508.8 26.4 L528 24.3 L547.3 22.1 L566.5 22.1 L585.8 22.1 L605 22.1 L624.3 20 L643.5 20 L662.8 20 L682 20 L701.3 22.1 L720.5 22.1 L739.8 22.1 L759 22.1 L778.3 20 L797.5 20 L816.8 20 L836 20 L836 170 L220 170 Z" fill="url(#fill-forks)"/>
-    <path d="M220 170 L239.3 114.3 L258.5 82.1 L277.8 67.1 L297 56.4 L316.3 45.7 L335.5 37.1 L354.8 35 L374 35 L393.3 32.9 L412.5 32.9 L431.8 30.7 L451 30.7 L470.3 28.6 L489.5 26.4 L508.8 26.4 L528 24.3 L547.3 22.1 L566.5 22.1 L585.8 22.1 L605 22.1 L624.3 20 L643.5 20 L662.8 20 L682 20 L701.3 22.1 L720.5 22.1 L739.8 22.1 L759 22.1 L778.3 20 L797.5 20 L816.8 20 L836 20" fill="none" stroke="#06b6d4" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M220 170 L238.7 114.3 L257.3 82.1 L276 67.1 L294.7 56.4 L313.3 45.7 L332 37.1 L350.7 35 L369.3 35 L388 32.9 L406.7 32.9 L425.3 30.7 L444 30.7 L462.7 28.6 L481.3 26.4 L500 26.4 L518.7 24.3 L537.3 22.1 L556 22.1 L574.7 22.1 L593.3 22.1 L612 20 L630.7 20 L649.3 20 L668 20 L686.7 22.1 L705.3 22.1 L724 22.1 L742.7 22.1 L761.3 20 L780 20 L798.7 20 L817.3 20 L836 20 L836 170 L220 170 Z" fill="url(#fill-forks)"/>
+    <path d="M220 170 L238.7 114.3 L257.3 82.1 L276 67.1 L294.7 56.4 L313.3 45.7 L332 37.1 L350.7 35 L369.3 35 L388 32.9 L406.7 32.9 L425.3 30.7 L444 30.7 L462.7 28.6 L481.3 26.4 L500 26.4 L518.7 24.3 L537.3 22.1 L556 22.1 L574.7 22.1 L593.3 22.1 L612 20 L630.7 20 L649.3 20 L668 20 L686.7 22.1 L705.3 22.1 L724 22.1 L742.7 22.1 L761.3 20 L780 20 L798.7 20 L817.3 20 L836 20" fill="none" stroke="#06b6d4" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
     <circle cx="836" cy="20" r="5" fill="#06b6d4" stroke="#fff" stroke-width="2"/>
-    <text x="220" y="194" text-anchor="start" class="secondary" font-size="9">Aug 19, 2026</text><text x="528" y="194" text-anchor="middle" class="secondary" font-size="9">Sep 4, 2026</text><text x="836" y="194" text-anchor="end" class="secondary" font-size="9">Sep 20, 2026</text>
+    <text x="220" y="194" text-anchor="start" class="secondary" font-size="9">Aug 19, 2026</text><text x="528" y="194" text-anchor="middle" class="secondary" font-size="9">Sep 4, 2026</text><text x="836" y="194" text-anchor="end" class="secondary" font-size="9">Sep 21, 2026</text>
   </g>
-    <text x="30" y="645" class="secondary" font-size="11">Updated Sep 20, 2026</text>
+    <text x="30" y="645" class="secondary" font-size="11">Updated Sep 21, 2026</text>
     <a href="https://github.com/MacRimi/repo-growth" target="_blank" aria-label="Open the Repo Growth project">
       <text x="886" y="645" fill="#8b5cf6" text-anchor="end" font-size="13" font-weight="700">Generated by Repo Growth ↗</text>
     </a>
